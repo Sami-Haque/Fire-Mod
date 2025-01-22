@@ -28,6 +28,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+/**
+ * Section: Constants and Properties
+ * This section defines constants and properties for the FireBlock class,
+ * including age and directional properties.
+ */
+
+
 public class FireBlock extends BaseFireBlock {
    public static final int MAX_AGE = 15;
    public static final IntegerProperty AGE = BlockStateProperties.AGE_15;
@@ -39,12 +46,22 @@ public class FireBlock extends BaseFireBlock {
    private static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_53467_) -> {
       return p_53467_.getKey() != Direction.DOWN;
    }).collect(Util.toMap());
+
+   /**
+    * Section: Voxel Shapes
+    * Defines the voxel shapes for fire based on its directions.
+    */
    private static final VoxelShape UP_AABB = Block.box(0.0D, 15.0D, 0.0D, 16.0D, 16.0D, 16.0D);
    private static final VoxelShape WEST_AABB = Block.box(0.0D, 0.0D, 0.0D, 1.0D, 16.0D, 16.0D);
    private static final VoxelShape EAST_AABB = Block.box(15.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
    private static final VoxelShape NORTH_AABB = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, 1.0D);
    private static final VoxelShape SOUTH_AABB = Block.box(0.0D, 0.0D, 15.0D, 16.0D, 16.0D, 16.0D);
    private final Map<BlockState, VoxelShape> shapesCache;
+
+   /**
+    * Section: Ignition and Burn Constants \n
+    * Defines various levels of ignition and burn rates.
+    */
    private static final int IGNITE_INSTANT = 60;
    private static final int IGNITE_EASY = 30;
    private static final int IGNITE_MEDIUM = 15;
@@ -56,6 +73,10 @@ public class FireBlock extends BaseFireBlock {
    private final Object2IntMap<Block> igniteOdds = new Object2IntOpenHashMap<>();
    private final Object2IntMap<Block> burnOdds = new Object2IntOpenHashMap<>();
 
+   /**
+    * Section: Constructor
+    * Initializes default states and caches shapes for the FireBlock.
+    */
    public FireBlock(BlockBehaviour.Properties p_53425_) {
       super(p_53425_, 1.0F);
       this.registerDefaultState(this.stateDefinition.any().setValue(AGE, Integer.valueOf(0)).setValue(NORTH, Boolean.valueOf(false)).setValue(EAST, Boolean.valueOf(false)).setValue(SOUTH, Boolean.valueOf(false)).setValue(WEST, Boolean.valueOf(false)).setValue(UP, Boolean.valueOf(false)));
@@ -64,6 +85,10 @@ public class FireBlock extends BaseFireBlock {
       }).collect(Collectors.toMap(Function.identity(), FireBlock::calculateShape)));
    }
 
+   /**
+    * Section: Shape Calculation
+    * Calculates the voxel shape based on the block state.
+    */
    private static VoxelShape calculateShape(BlockState p_53491_) {
       VoxelShape voxelshape = Shapes.empty();
       if (p_53491_.getValue(UP)) {
@@ -89,14 +114,26 @@ public class FireBlock extends BaseFireBlock {
       return voxelshape.isEmpty() ? DOWN_AABB : voxelshape;
    }
 
+   /**
+    * Section: Block Updates
+    * Handles block updates when adjacent blocks change.
+    */
    public BlockState updateShape(BlockState p_53458_, Direction p_53459_, BlockState p_53460_, LevelAccessor p_53461_, BlockPos p_53462_, BlockPos p_53463_) {
       return this.canSurvive(p_53458_, p_53461_, p_53462_) ? this.getStateWithAge(p_53461_, p_53462_, p_53458_.getValue(AGE)) : Blocks.AIR.defaultBlockState();
    }
 
+   /**
+    * Section: Shape Retrieval
+    * Retrieves the shape of the fire block for rendering or collision.
+    */
    public VoxelShape getShape(BlockState p_53474_, BlockGetter p_53475_, BlockPos p_53476_, CollisionContext p_53477_) {
       return this.shapesCache.get(p_53474_.setValue(AGE, Integer.valueOf(0)));
    }
 
+   /**
+    * Section: Placement State
+    * Determines the block state during placement.
+    */
    public BlockState getStateForPlacement(BlockPlaceContext p_53427_) {
       return this.getStateForPlacement(p_53427_.getLevel(), p_53427_.getClickedPos());
    }
@@ -120,11 +157,19 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
+   /**
+    * Section: Survival Check
+    * Determines if the fire block can remain in its current position.
+    */
    public boolean canSurvive(BlockState p_53454_, LevelReader p_53455_, BlockPos p_53456_) {
       BlockPos blockpos = p_53456_.below();
       return p_53455_.getBlockState(blockpos).isFaceSturdy(p_53455_, blockpos, Direction.UP) || this.isValidFireLocation(p_53455_, p_53456_);
    }
 
+   /**
+    * Section: Fire Ticking
+    * Implements the ticking behavior for fire blocks, including spreading and extinguishing.
+    */
    public void tick(BlockState p_221160_, ServerLevel p_221161_, BlockPos p_221162_, RandomSource p_221163_) {
       p_221161_.scheduleTick(p_221162_, this, getFireTickDelay(p_221161_.random));
       if (p_221161_.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) {
@@ -201,10 +246,18 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
+   /**
+    * Section: Rain Detection
+    * Checks if the fire block is near rain, which can extinguish it.
+    */
    protected boolean isNearRain(Level p_53429_, BlockPos p_53430_) {
       return p_53429_.isRainingAt(p_53430_) || p_53429_.isRainingAt(p_53430_.west()) || p_53429_.isRainingAt(p_53430_.east()) || p_53429_.isRainingAt(p_53430_.north()) || p_53429_.isRainingAt(p_53430_.south());
    }
 
+   /**
+    * Section: Burn and Ignite Odds
+    * Retrieves the odds of a block burning.
+    */
    private int getBurnOdds(BlockState p_221165_) {
       return p_221165_.hasProperty(BlockStateProperties.WATERLOGGED) && p_221165_.getValue(BlockStateProperties.WATERLOGGED) ? 0 : this.burnOdds.getInt(p_221165_.getBlock());
    }
@@ -213,6 +266,10 @@ public class FireBlock extends BaseFireBlock {
       return p_221167_.hasProperty(BlockStateProperties.WATERLOGGED) && p_221167_.getValue(BlockStateProperties.WATERLOGGED) ? 0 : this.igniteOdds.getInt(p_221167_.getBlock());
    }
 
+   /**
+    * Section: Burn Check
+    * Handles burning logic for nearby flammable blocks.
+    */
    private void checkBurnOut(Level p_221151_, BlockPos p_221152_, int p_221153_, RandomSource p_221154_, int p_221155_) {
       int i = this.getBurnOdds(p_221151_.getBlockState(p_221152_));
       if (p_221154_.nextInt(p_221153_) < i) {
@@ -232,11 +289,19 @@ public class FireBlock extends BaseFireBlock {
 
    }
 
+   /**
+    * Section: State Updates
+    * Retrieves the updated block state based on its age.
+    */
    private BlockState getStateWithAge(LevelAccessor p_53438_, BlockPos p_53439_, int p_53440_) {
       BlockState blockstate = getState(p_53438_, p_53439_);
       return blockstate.is(Blocks.FIRE) ? blockstate.setValue(AGE, Integer.valueOf(p_53440_)) : blockstate;
    }
 
+   /**
+    * Section: Fire Location Validation
+    * Checks if the fire block is in a valid location to burn.
+    */
    private boolean isValidFireLocation(BlockGetter p_53486_, BlockPos p_53487_) {
       for(Direction direction : Direction.values()) {
          if (this.canBurn(p_53486_.getBlockState(p_53487_.relative(direction)))) {
@@ -247,6 +312,10 @@ public class FireBlock extends BaseFireBlock {
       return false;
    }
 
+   /**
+    * Section: Ignition Odds Calculation
+    * Calculates the odds of igniting nearby blocks based on their properties.
+    */
    private int getIgniteOdds(LevelReader p_221157_, BlockPos p_221158_) {
       if (!p_221157_.isEmptyBlock(p_221158_)) {
          return 0;
@@ -262,28 +331,52 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
+   /**
+    * Section: Burn Check
+    * Determines if the block is flammable and can burn.
+    */
    protected boolean canBurn(BlockState p_53489_) {
       return this.getIgniteOdds(p_53489_) > 0;
    }
 
+   /**
+    * Section: Placement Handling
+    * Schedules the fire block to tick when it is placed.
+    */
    public void onPlace(BlockState p_53479_, Level p_53480_, BlockPos p_53481_, BlockState p_53482_, boolean p_53483_) {
       super.onPlace(p_53479_, p_53480_, p_53481_, p_53482_, p_53483_);
       p_53480_.scheduleTick(p_53481_, this, getFireTickDelay(p_53480_.random));
    }
 
+   /**
+    * Section: Fire Tick Delay
+    * Determines the delay between fire block ticks.
+    */
    private static int getFireTickDelay(RandomSource p_221149_) {
       return 30 + p_221149_.nextInt(10);
    }
 
+   /**
+    * Section: Block State Definition
+    * Defines the possible states of the fire block.
+    */
    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53465_) {
       p_53465_.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
    }
 
+   /**
+    * Section: Flammability Settings
+    * Configures the flammability properties for various blocks.
+    */
    private void setFlammable(Block p_53445_, int p_53446_, int p_53447_) {
       this.igniteOdds.put(p_53445_, p_53446_);
       this.burnOdds.put(p_53445_, p_53447_);
    }
 
+   /**
+    * Section: Initialization
+    * Sets the flammability of specific blocks when the FireBlock is loaded.
+    */
    public static void bootStrap() {
       FireBlock fireblock = (FireBlock)Blocks.FIRE;
       fireblock.setFlammable(Blocks.OAK_PLANKS, 5, 20);
