@@ -91,25 +91,25 @@ public class FireBlock extends BaseFireBlock {
     * Section: Shape Calculation
     * Calculates the voxel shape based on the block state.
     */
-   private static VoxelShape calculateShape(BlockState p_53491_) {
+   private static VoxelShape calculateShape(BlockState BLOCKSTATE) {
       VoxelShape voxelshape = Shapes.empty();
-      if (p_53491_.getValue(UP)) {
+      if (BLOCKSTATE.getValue(UP)) {
          voxelshape = UP_AABB;
       }
 
-      if (p_53491_.getValue(NORTH)) {
+      if (BLOCKSTATE.getValue(NORTH)) {
          voxelshape = Shapes.or(voxelshape, NORTH_AABB);
       }
 
-      if (p_53491_.getValue(SOUTH)) {
+      if (BLOCKSTATE.getValue(SOUTH)) {
          voxelshape = Shapes.or(voxelshape, SOUTH_AABB);
       }
 
-      if (p_53491_.getValue(EAST)) {
+      if (BLOCKSTATE.getValue(EAST)) {
          voxelshape = Shapes.or(voxelshape, EAST_AABB);
       }
 
-      if (p_53491_.getValue(WEST)) {
+      if (BLOCKSTATE.getValue(WEST)) {
          voxelshape = Shapes.or(voxelshape, WEST_AABB);
       }
 
@@ -125,15 +125,15 @@ public class FireBlock extends BaseFireBlock {
     * Section: Block Updates
     * Handles block updates when adjacent blocks change.
     */
-   public BlockState updateShape(BlockState p_53458_, Direction p_53459_, BlockState p_53460_, LevelAccessor p_53461_, BlockPos p_53462_, BlockPos p_53463_) {
-      return this.canSurvive(p_53458_, p_53461_, p_53462_) ? this.getStateWithAge(p_53461_, p_53462_, p_53458_.getValue(AGE)) : Blocks.AIR.defaultBlockState();
+   public BlockState updateShape(BlockState p_53458_, Direction p_53459_, BlockState p_53460_, LevelAccessor p_53461_, BlockPos BLOCKPOSITION, BlockPos p_53463_) {
+      return this.canSurvive(p_53458_, p_53461_, BLOCKPOSITION) ? this.getStateWithAge(p_53461_, BLOCKPOSITION, p_53458_.getValue(AGE)) : Blocks.AIR.defaultBlockState();
    }
 
    /**
     * Section: Shape Retrieval
     * Retrieves the shape of the fire block for rendering or collision.
     */
-   public VoxelShape getShape(BlockState p_53474_, BlockGetter p_53475_, BlockPos p_53476_, CollisionContext p_53477_) {
+   public VoxelShape getShape(BlockState p_53474_, BlockGetter p_53475_, BlockPos BLOCKPOSITION, CollisionContext p_53477_) {
       return this.shapesCache.get(p_53474_.setValue(AGE, Integer.valueOf(0)));
    }
 
@@ -145,8 +145,8 @@ public class FireBlock extends BaseFireBlock {
       return this.getStateForPlacement(p_53427_.getLevel(), p_53427_.getClickedPos());
    }
 
-   protected BlockState getStateForPlacement(BlockGetter p_53471_, BlockPos p_53472_) {
-      BlockPos blockpos = p_53472_.below();
+   protected BlockState getStateForPlacement(BlockGetter p_53471_, BlockPos BLOCKPOSITION) {
+      BlockPos blockpos = BLOCKPOSITION.below();
       BlockState blockstate = p_53471_.getBlockState(blockpos);
       if (!this.canBurn(blockstate) && !blockstate.isFaceSturdy(p_53471_, blockpos, Direction.UP)) {
          BlockState blockstate1 = this.defaultBlockState();
@@ -154,7 +154,7 @@ public class FireBlock extends BaseFireBlock {
          for(Direction direction : Direction.values()) {
             BooleanProperty booleanproperty = PROPERTY_BY_DIRECTION.get(direction);
             if (booleanproperty != null) {
-               blockstate1 = blockstate1.setValue(booleanproperty, Boolean.valueOf(this.canBurn(p_53471_.getBlockState(p_53472_.relative(direction)))));
+               blockstate1 = blockstate1.setValue(booleanproperty, Boolean.valueOf(this.canBurn(p_53471_.getBlockState(BLOCKPOSITION.relative(direction)))));
             }
          }
 
@@ -168,9 +168,9 @@ public class FireBlock extends BaseFireBlock {
     * Section: Survival Check
     * Determines if the fire block can remain in its current position.
     */
-   public boolean canSurvive(BlockState p_53454_, LevelReader p_53455_, BlockPos p_53456_) {
-      BlockPos blockpos = p_53456_.below();
-      return p_53455_.getBlockState(blockpos).isFaceSturdy(p_53455_, blockpos, Direction.UP) || this.isValidFireLocation(p_53455_, p_53456_);
+   public boolean canSurvive(BlockState p_53454_, LevelReader LEVELREADER, BlockPos BLOCKPOSITION) {
+      BlockPos blockpos = BLOCKPOSITION.below();
+      return LEVELREADER.getBlockState(blockpos).isFaceSturdy(LEVELREADER, blockpos, Direction.UP) || this.isValidFireLocation(LEVELREADER, BLOCKPOSITION);
    }
 
 
@@ -184,42 +184,42 @@ public class FireBlock extends BaseFireBlock {
     * including spreading and
     * extinguishing.
     */
-   public void tick(BlockState p_221160_, ServerLevel p_221161_, BlockPos p_221162_, RandomSource p_221163_) {
-      p_221161_.scheduleTick(p_221162_, this, getFireTickDelay(p_221161_.random));     /// 1. Schedule Next Tick
-      if (p_221161_.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) {            /// 2. Check Fire-Tick Game Rule
-         if (!p_221160_.canSurvive(p_221161_, p_221162_)) {                            /// 3. Check if Fire Can Survive (removes fire if not valid area via multiple checking functions to adjacent blocks)
-            p_221161_.removeBlock(p_221162_, false);
+   public void tick(BlockState BLOCKSTATE, ServerLevel SERVERLEVEL, BlockPos BLOCKPOSITION, RandomSource RANDOMSOURCE) {
+      SERVERLEVEL.scheduleTick(BLOCKPOSITION, this, getFireTickDelay(SERVERLEVEL.random));     /// 1. Schedule Next Tick
+      if (SERVERLEVEL.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) {            /// 2. Check Fire-Tick Game Rule
+         if (!BLOCKSTATE.canSurvive(SERVERLEVEL, BLOCKPOSITION)) {                            /// 3. Check if Fire Can Survive (removes fire if not valid area via multiple checking functions to adjacent blocks)
+            SERVERLEVEL.removeBlock(BLOCKPOSITION, false);
          }
 
          /**
           * 4. Check for Extinguishing Conditions
           */
-         BlockState blockstate = p_221161_.getBlockState(p_221162_.below());           /// 4. Check for Extinguishing Conditions
-         boolean flag = blockstate.is(p_221161_.dimensionType().infiniburn());         /// (a) Determine if Block is in an "Infinite Burn" Area
+         BlockState ADJACENTBLOCKSTATE = SERVERLEVEL.getBlockState(BLOCKPOSITION.below());           /// 4. Check for Extinguishing Conditions
+         boolean IS_INFINITE_BURN_AREA = ADJACENTBLOCKSTATE.is(SERVERLEVEL.dimensionType().infiniburn());         /// (a) Determine if Block is in an "Infinite Burn" Area
 
-         int i = p_221160_.getValue(AGE);       /// NOTE: i = AGE
+         int FIREAGE = BLOCKSTATE.getValue(AGE);       /// NOTE: FIREAGE = AGE
 
-         if (!flag && p_221161_.isRaining() && this.isNearRain(p_221161_, p_221162_) && p_221163_.nextFloat() < 0.2F + (float)i * 0.03F) {
-            p_221161_.removeBlock(p_221162_, false);                                   /// (b) Extinguish Fire in Rain (Random chance based on the fire's AGE property.)
+         if (!IS_INFINITE_BURN_AREA && SERVERLEVEL.isRaining() && this.isNearRain(SERVERLEVEL, BLOCKPOSITION) && RANDOMSOURCE.nextFloat() < 0.2F + (float)FIREAGE * 0.03F) {
+            SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                                   /// (b) Extinguish Fire in Rain (Random chance based on the fire's AGE property.)
          } else {
-            int j = Math.min(15, i + p_221163_.nextInt(3) / 2);                        /// 5. Update Fire's Age
-            if (i != j) {
-               p_221160_ = p_221160_.setValue(AGE, Integer.valueOf(j));
-               p_221161_.setBlock(p_221162_, p_221160_, 4);
+            int UPDATED_FIREAGE = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);                        /// 5. Update Fire's Age
+            if (FIREAGE != UPDATED_FIREAGE) {
+               BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_FIREAGE));
+               SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 4);
             }
 
-            if (!flag) {                                                               /// 6. Validate Fire Location
-               if (!this.isValidFireLocation(p_221161_, p_221162_)) {                  /// (a) Check if Fire Location is Valid
-                  BlockPos blockpos = p_221162_.below();
-                  if (!p_221161_.getBlockState(blockpos).isFaceSturdy(p_221161_, blockpos, Direction.UP) || i > 3) {
-                     p_221161_.removeBlock(p_221162_, false);
+            if (!IS_INFINITE_BURN_AREA) {                                                               /// 6. Validate Fire Location
+               if (!this.isValidFireLocation(SERVERLEVEL, BLOCKPOSITION)) {                  /// (a) Check if Fire Location is Valid
+                  BlockPos blockpos = BLOCKPOSITION.below();
+                  if (!SERVERLEVEL.getBlockState(blockpos).isFaceSturdy(SERVERLEVEL, blockpos, Direction.UP) || FIREAGE > 3) {
+                     SERVERLEVEL.removeBlock(BLOCKPOSITION, false);
                   }
 
                   return;
                }
 
-               if (i == 15 && p_221163_.nextInt(4) == 0 && !this.canBurn(p_221161_.getBlockState(p_221162_.below()))) {
-                  p_221161_.removeBlock(p_221162_, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
+               if (FIREAGE == 15 && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) {
+                  SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
                   return;
                }
             }
@@ -227,43 +227,42 @@ public class FireBlock extends BaseFireBlock {
             /**
              * 7. Spread Fire to Adjacent Blocks
              */
-            boolean flag1 = p_221161_.getBiome(p_221162_).is(BiomeTags.INCREASED_FIRE_BURNOUT);    /// (a) Check for Increased Burnout Biome (Wet or Humid Biomes)
-            int k = flag1 ? -50 : 0;                           /// if in increased burnout biome, flag is true: so k = -50: Reduces the chance of fire spreading by increasing the burnout effect.
+            boolean IS_INCREASED_BURNOUT_BIOME = SERVERLEVEL.getBiome(BLOCKPOSITION).is(BiomeTags.INCREASED_FIRE_BURNOUT);    /// (a) Check for Increased Burnout Biome (Wet or Humid Biomes)
+            int BIOME_BURNOUT_EFFECT = IS_INCREASED_BURNOUT_BIOME ? -50 : 0;                           /// if in increased burnout biome, flag is true: so BIOME_BURNOUT_EFFECT = -50: Reduces the chance of fire spreading by increasing the burnout effect.
 
-            this.checkBurnOut(p_221161_, p_221162_.east(), 300 + k, p_221163_, i);        /// (b) Spread to Adjacent Blocks
-            this.checkBurnOut(p_221161_, p_221162_.west(), 300 + k, p_221163_, i);              /// see Section: Burn Check
-            this.checkBurnOut(p_221161_, p_221162_.below(), 250 + k, p_221163_, i);
-            this.checkBurnOut(p_221161_, p_221162_.above(), 250 + k, p_221163_, i);
-            this.checkBurnOut(p_221161_, p_221162_.north(), 300 + k, p_221163_, i);
-            this.checkBurnOut(p_221161_, p_221162_.south(), 300 + k, p_221163_, i);
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.east(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);        /// (b) Spread to Adjacent Blocks
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.west(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);              /// see Section: Burn Check
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.north(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.south(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
             BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
 
             /**
              * three-dimensional spread of fire from the current fire block
-             * where l, i1, and j1 represent offsets in X, Z, and Y directions, respectively
+             * where OFFSET_X, OFFSET_Z, and OFFSET_Y represent offsets in X, Z, and Y directions, respectively
              */
-            for(int l = -1; l <= 1; ++l) {                     /// l (-1 to 1): X-axis (left/right relative to the fire block).
-               for(int i1 = -1; i1 <= 1; ++i1) {               /// i1 (-1 to 1): Z-axis (forward/backward relative to the fire block).
-                  for(int j1 = -1; j1 <= 4; ++j1) {            /// j1 (-1 to 4): Y-axis (up/down relative to the fire block; includes further upwards range).
+            for (int OFFSET_X = -1; OFFSET_X <= 1; ++OFFSET_X) {                     /// OFFSET_X (-1 to 1): X-axis (left/right relative to the fire block).
+               for (int OFFSET_Z = -1; OFFSET_Z <= 1; ++OFFSET_Z) {               /// OFFSET_Z (-1 to 1): Z-axis (forward/backward relative to the fire block).
+                  for (int OFFSET_Y = -1; OFFSET_Y <= 4; ++OFFSET_Y) {            /// OFFSET_Y (-1 to 4): Y-axis (up/down relative to the fire block; includes further upwards range).
 
-                     if (l != 0 || j1 != 0 || i1 != 0) {          /// Exclude the Fire Block Itself
-                        int k1 = 100;                             /// k1 is a base spread chance, starting at 100.
-                        if (j1 > 1) {
-                           k1 += (j1 - 1) * 100;                  /// For positions higher than 1 block above (j1 > 1), the spread chance is reduced (higher k1 values make spread less likely).
+                     if (OFFSET_X != 0 || OFFSET_Y != 0 || OFFSET_Z != 0) {          /// Exclude the Fire Block Itself
+                        int BASE_SPREAD_CHANCE = 100;                             /// BASE_SPREAD_CHANCE is a base spread chance, starting at 100.
+                        if (OFFSET_Y > 1) {
+                           BASE_SPREAD_CHANCE += (OFFSET_Y - 1) * 100;                  /// For positions higher than 1 block above (OFFSET_Y > 1), the spread chance is reduced (higher BASE_SPREAD_CHANCE values make spread less likely).
                         }
 
-                        blockpos$mutableblockpos.setWithOffset(p_221162_, l, j1, i1);
-                        int l1 = this.getIgniteOdds(p_221161_, blockpos$mutableblockpos);
-                        if (l1 > 0) {                             /// Only flammable blocks (l1 > 0) proceed further.
-                                                                           /// Calculate Ignite Probability
-                           int i2 = (l1 + 40 + p_221161_.getDifficulty().getId() * 7) / (i + 30);
-                           if (flag1) {                                    /// If flag1 (biome with INCREASED_FIRE_BURNOUT), the chance is halve
-                              i2 /= 2;
+                        blockpos$mutableblockpos.setWithOffset(BLOCKPOSITION, OFFSET_X, OFFSET_Y, OFFSET_Z);
+                        int IGNITE_ODDS = this.getIgniteOdds_Adjacent(SERVERLEVEL, blockpos$mutableblockpos);
+                        if (IGNITE_ODDS > 0) {                             /// Only flammable blocks (IGNITE_ODDS > 0) proceed further.
+                           int IGNITE_ODDS_ADJUSTED = (IGNITE_ODDS + 40 + SERVERLEVEL.getDifficulty().getId() * 7) / (FIREAGE + 30);
+                           if (IS_INCREASED_BURNOUT_BIOME) {                                    /// If IS_INCREASED_BURNOUT_BIOME (biome with INCREASED_FIRE_BURNOUT), the chance is halved
+                              IGNITE_ODDS_ADJUSTED /= 2;
                            }
 
-                           if (i2 > 0 && p_221163_.nextInt(k1) <= i2 && (!p_221161_.isRaining() || !this.isNearRain(p_221161_, blockpos$mutableblockpos))) {
-                              int j2 = Math.min(15, i + p_221163_.nextInt(5) / 4);
-                              p_221161_.setBlock(blockpos$mutableblockpos, this.getStateWithAge(p_221161_, blockpos$mutableblockpos, j2), 3);      /// Ignite the block with a fire block of age j2
+                           if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
+                              int UPDATED_FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);
+                              SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_FIREAGE2
                            }
                         }
                      }
@@ -279,8 +278,8 @@ public class FireBlock extends BaseFireBlock {
     * Section: Rain Detection
     * Checks if the fire block is near rain, which can extinguish it.
     */
-   protected boolean isNearRain(Level p_53429_, BlockPos p_53430_) {
-      return p_53429_.isRainingAt(p_53430_) || p_53429_.isRainingAt(p_53430_.west()) || p_53429_.isRainingAt(p_53430_.east()) || p_53429_.isRainingAt(p_53430_.north()) || p_53429_.isRainingAt(p_53430_.south());
+   protected boolean isNearRain(Level LEVEL, BlockPos BLOCKPOSITION) {
+      return LEVEL.isRainingAt(BLOCKPOSITION) || LEVEL.isRainingAt(BLOCKPOSITION.west()) || LEVEL.isRainingAt(BLOCKPOSITION.east()) || LEVEL.isRainingAt(BLOCKPOSITION.north()) || LEVEL.isRainingAt(BLOCKPOSITION.south());
    }
 
    /**
@@ -288,18 +287,18 @@ public class FireBlock extends BaseFireBlock {
     * Retrieves the odds of a block burning.
     * Directly checks if the specific block represented by the BlockState has an ignition probability, returning 0 if the block is waterlogged.
     */
-   private int getBurnOdds(BlockState p_221165_) {
-      return p_221165_.hasProperty(BlockStateProperties.WATERLOGGED) &&
-              p_221165_.getValue(BlockStateProperties.WATERLOGGED)
+   private int getBurnOdds(BlockState BLOCKSTATE) {
+      return BLOCKSTATE.hasProperty(BlockStateProperties.WATERLOGGED) &&
+              BLOCKSTATE.getValue(BlockStateProperties.WATERLOGGED)
               ? 0
-              : this.burnOdds.getInt(p_221165_.getBlock());
+              : this.burnOdds.getInt(BLOCKSTATE.getBlock());
    }
 
-   private int getIgniteOdds(BlockState p_221167_) {
-      return p_221167_.hasProperty(BlockStateProperties.WATERLOGGED) &&
-              p_221167_.getValue(BlockStateProperties.WATERLOGGED)
+   private int getIgniteOdds1(BlockState BLOCKSTATE_IGNITE) {   // if it is waterlogged it is not gonna ignite
+      return BLOCKSTATE_IGNITE.hasProperty(BlockStateProperties.WATERLOGGED) &&
+              BLOCKSTATE_IGNITE.getValue(BlockStateProperties.WATERLOGGED)
               ? 0
-              : this.igniteOdds.getInt(p_221167_.getBlock());
+              : this.igniteOdds.getInt(BLOCKSTATE_IGNITE.getBlock());
    }
 
    /**
@@ -307,42 +306,47 @@ public class FireBlock extends BaseFireBlock {
     * Handles burning logic for nearby flammable blocks.
     * Related to section 7b
     */
-   private void checkBurnOut(Level p_221151_, BlockPos p_221152_, int p_221153_, RandomSource p_221154_, int p_221155_) {
-      int i = this.getBurnOdds(p_221151_.getBlockState(p_221152_));                             /// Check the Burn Odds of the Block
-      if (p_221154_.nextInt(p_221153_) < i) {                                                   /// Random Chance for Ignition
-         BlockState blockstate = p_221151_.getBlockState(p_221152_);
-         if (p_221154_.nextInt(p_221155_ + 10) < 5                /// The fire's age influences this randomness; older fire may spread more slowly.
-                 && !p_221151_.isRainingAt(p_221152_)) {          /// Prevents ignition if the block is exposed to rain.
-            int j = Math.min(p_221155_ + p_221154_.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block
-            p_221151_.setBlock(p_221152_, this.getStateWithAge(p_221151_, p_221152_, j), 3);
+   private void checkBurnOut(Level LEVEL, BlockPos ADJACENTBLOCKPOSITION, int SPREADCHANCE, RandomSource RANDOMSOURCE, int FIREAGE) {
+      int ADJACENT_BURN_ODDS = this.getBurnOdds(LEVEL.getBlockState(ADJACENTBLOCKPOSITION));                             /// Check the Burn Odds of the Block
+      if (RANDOMSOURCE.nextInt(SPREADCHANCE) < ADJACENT_BURN_ODDS) {                                                   /// Random Chance for Ignition
+
+         // Check if the block is TNT first
+         BlockState ADJACENTBLOCKSTATE = LEVEL.getBlockState(ADJACENTBLOCKPOSITION);
+
+
+         // Handle fire ignition or removal
+         if (RANDOMSOURCE.nextInt(FIREAGE + 10) < 5                /// The fire's age influences this randomness; older fire may spread more slowly.
+                 && !LEVEL.isRainingAt(ADJACENTBLOCKPOSITION)) {          /// Prevents ignition if the block is exposed to rain.
+            int UPDATED_FIREAGE = Math.min(FIREAGE + RANDOMSOURCE.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block
+            LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_FIREAGE), 3);
          } else {
-            p_221151_.removeBlock(p_221152_, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed.
+            LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed.
          }
 
-         Block block = blockstate.getBlock();
-         if (block instanceof TntBlock) {                         ///  Special Case: TNT: If the block is TNT, it explodes when it burns, triggering its specific behavior
-            TntBlock.explode(p_221151_, p_221152_);
+         Block BLOCK = ADJACENTBLOCKSTATE.getBlock();
+         if (BLOCK instanceof TntBlock) {                         ///  Special Case: TNT: If the block is TNT, it explodes when it burns, triggering its specific behavior
+            TntBlock.explode(LEVEL, ADJACENTBLOCKPOSITION); // Exit the method since TNT explosion is handled
          }
+
       }
-
    }
 
    /**
     * Section: State Updates
     * Retrieves the updated block state based on its age.
     */
-   private BlockState getStateWithAge(LevelAccessor p_53438_, BlockPos p_53439_, int p_53440_) {
-      BlockState blockstate = getState(p_53438_, p_53439_);
-      return blockstate.is(Blocks.FIRE) ? blockstate.setValue(AGE, Integer.valueOf(p_53440_)) : blockstate;
+   private BlockState getStateWithAge(LevelAccessor LEVELACCESSOR, BlockPos BLOCKPOSITION, int FIREAGE) {
+      BlockState BLOCKSTATE = getState(LEVELACCESSOR, BLOCKPOSITION);
+      return BLOCKSTATE.is(Blocks.FIRE) ? BLOCKSTATE.setValue(AGE, Integer.valueOf(FIREAGE)) : BLOCKSTATE;
    }
 
    /**
     * Section: Fire Location Validation
     * Checks if the fire block is in a valid location to burn.
     */
-   private boolean isValidFireLocation(BlockGetter p_53486_, BlockPos p_53487_) {
-      for(Direction direction : Direction.values()) {
-         if (this.canBurn(p_53486_.getBlockState(p_53487_.relative(direction)))) {
+   private boolean isValidFireLocation(BlockGetter BLOCKGETTER, BlockPos BLOCKPOSITION) {
+      for (Direction direction : Direction.values()) {
+         if (this.canBurn(BLOCKGETTER.getBlockState(BLOCKPOSITION.relative(direction)))) {
             return true;
          }
       }
@@ -358,18 +362,18 @@ public class FireBlock extends BaseFireBlock {
     * for flammable blocks and returns the highest ignition odds among them.
     * If the position itself is not empty, it returns 0 (indicating no ignition is possible).
     */
-   private int getIgniteOdds(LevelReader p_221157_, BlockPos p_221158_) {
-      if (!p_221157_.isEmptyBlock(p_221158_)) {
+   private int getIgniteOdds_Adjacent(LevelReader LEVELREADER, BlockPos BLOCKPOSITION) { // if it is an empty block it will look at its surrounding blocks
+      if (!LEVELREADER.isEmptyBlock(BLOCKPOSITION)) {
          return 0;
       } else {
-         int i = 0;
+         int HIGHEST_IGNITION_ODDS = 0;
 
          for(Direction direction : Direction.values()) {
-            BlockState blockstate = p_221157_.getBlockState(p_221158_.relative(direction));
-            i = Math.max(this.getIgniteOdds(blockstate), i);
+            BlockState ADJACENT_BLOCKSTATE = LEVELREADER.getBlockState(BLOCKPOSITION.relative(direction));
+            HIGHEST_IGNITION_ODDS = Math.max(this.getIgniteOdds1(ADJACENT_BLOCKSTATE), HIGHEST_IGNITION_ODDS);
          }
 
-         return i;
+         return HIGHEST_IGNITION_ODDS;
       }
    }
 
@@ -377,48 +381,47 @@ public class FireBlock extends BaseFireBlock {
     * Section: Burn Check
     * Determines if the block is flammable and can burn.
     */
-   protected boolean canBurn(BlockState p_53489_) {
-      return this.getIgniteOdds(p_53489_) > 0;
+   protected boolean canBurn(BlockState BLOCKSTATE) {
+      return this.getIgniteOdds1(BLOCKSTATE) > 0;
    }
 
    /**
     * Section: Placement Handling
     * Schedules the fire block to tick when it is placed.
     */
-   public void onPlace(BlockState p_53479_, Level p_53480_, BlockPos p_53481_, BlockState p_53482_, boolean p_53483_) {
-      super.onPlace(p_53479_, p_53480_, p_53481_, p_53482_, p_53483_);
-      p_53480_.scheduleTick(p_53481_, this, getFireTickDelay(p_53480_.random));
+   public void onPlace(BlockState BLOCKSTATE_PLACEMENT, Level LEVEL, BlockPos BLOCKPOSITION_PLACEMENT, BlockState ADJACENT_BLOCKSTATE_PLACEMENT, boolean ISPLACEMENTVALID) {
+      super.onPlace(BLOCKSTATE_PLACEMENT, LEVEL, BLOCKPOSITION_PLACEMENT, ADJACENT_BLOCKSTATE_PLACEMENT, ISPLACEMENTVALID);
+      LEVEL.scheduleTick(BLOCKPOSITION_PLACEMENT, this, getFireTickDelay(LEVEL.random));
    }
 
    /**
     * Section: Fire Tick Delay
     * Determines the delay between fire block ticks.
     */
-   private static int getFireTickDelay(RandomSource p_221149_) {
-      return 30 + p_221149_.nextInt(10);
+   private static int getFireTickDelay(RandomSource RANDOMSOURCE) {
+      return 30 + RANDOMSOURCE.nextInt(10);
    }
 
    /**
     * Section: Block State Definition
     * Defines the possible states of the fire block.
     */
-   protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53465_) {
-      p_53465_.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
+   protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> BLOCKSTATEDEFINITIONBUILDER) {
+      BLOCKSTATEDEFINITIONBUILDER.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
    }
 
    /************************************************************************************
     * Initialisation again
     ************************************************************************************/
 
-
    /**
     * Section: Flammability Settings
     * Configures the flammability properties for various blocks. using the section below this.
     * Essentially for block, add the ignite and burn odds as features
     */
-   private void setFlammable(Block p_53445_, int p_53446_, int p_53447_) {
-      this.igniteOdds.put(p_53445_, p_53446_);
-      this.burnOdds.put(p_53445_, p_53447_);
+   private void setFlammable(Block BLOCK, int IGNITE_ODDS, int BURN_ODDS) {
+      this.igniteOdds.put(BLOCK, IGNITE_ODDS);
+      this.burnOdds.put(BLOCK, BURN_ODDS);
    }
 
    /**
