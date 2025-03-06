@@ -261,8 +261,8 @@ public class FireBlock extends BaseFireBlock {
                            }
 
                            if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
-                              int UPDATED_FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);
-                              SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_FIREAGE2
+                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);
+                              SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_2FIREAGE2
                            }
                         }
                      }
