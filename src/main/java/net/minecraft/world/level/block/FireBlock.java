@@ -29,14 +29,10 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /************************************************************************************
- * Initialisation
+ * Part 1. Configuration & Constants
  ************************************************************************************/
 
-/**
- * Section: Constants and Properties
- * This section defines constants and properties for the FireBlock class,
- * including age and directional properties.
- */
+/* Section 1.1: Constants and Properties */
 public class FireBlock extends BaseFireBlock {
    public static final int MAX_AGE = 15;
    public static final IntegerProperty AGE = BlockStateProperties.AGE_15;
@@ -49,10 +45,7 @@ public class FireBlock extends BaseFireBlock {
       return p_53467_.getKey() != Direction.DOWN;
    }).collect(Util.toMap());
 
-   /**
-    * Section: Voxel Shapes
-    * Defines the voxel shapes for fire based on its directions.
-    */
+   /* Section 1.2: Voxel Shapes */
    private static final VoxelShape UP_AABB = Block.box(0.0D, 15.0D, 0.0D, 16.0D, 16.0D, 16.0D);
    private static final VoxelShape WEST_AABB = Block.box(0.0D, 0.0D, 0.0D, 1.0D, 16.0D, 16.0D);
    private static final VoxelShape EAST_AABB = Block.box(15.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
@@ -60,10 +53,7 @@ public class FireBlock extends BaseFireBlock {
    private static final VoxelShape SOUTH_AABB = Block.box(0.0D, 0.0D, 15.0D, 16.0D, 16.0D, 16.0D);
    private final Map<BlockState, VoxelShape> shapesCache;
 
-   /**
-    * Section: Ignition and Burn Constants
-    * Defines various levels of ignition and burn rates.
-    */
+   /* Section 1.3: Ignition and Burn Constants */
    private static final int IGNITE_INSTANT = 60;
    private static final int IGNITE_EASY = 30;
    private static final int IGNITE_MEDIUM = 15;
@@ -75,10 +65,11 @@ public class FireBlock extends BaseFireBlock {
    private final Object2IntMap<Block> igniteOdds = new Object2IntOpenHashMap<>();
    private final Object2IntMap<Block> burnOdds = new Object2IntOpenHashMap<>();
 
-   /**
-    * Section: Constructor
-    * Initializes default states and caches shapes for the FireBlock.
-    */
+   /************************************************************************************
+    * Part 2. State Management & Visual Representation
+    ************************************************************************************/
+
+   /* Section 2.1: Constructor */
    public FireBlock(BlockBehaviour.Properties p_53425_) {
       super(p_53425_, 1.0F);
       this.registerDefaultState(this.stateDefinition.any().setValue(AGE, Integer.valueOf(0)).setValue(NORTH, Boolean.valueOf(false)).setValue(EAST, Boolean.valueOf(false)).setValue(SOUTH, Boolean.valueOf(false)).setValue(WEST, Boolean.valueOf(false)).setValue(UP, Boolean.valueOf(false)));
@@ -87,10 +78,7 @@ public class FireBlock extends BaseFireBlock {
       }).collect(Collectors.toMap(Function.identity(), FireBlock::calculateShape)));
    }
 
-   /**
-    * Section: Shape Calculation
-    * Calculates the voxel shape based on the block state.
-    */
+   /* Section 2.2: Shape Calculation */
    private static VoxelShape calculateShape(BlockState BLOCKSTATE) {
       VoxelShape voxelshape = Shapes.empty();
       if (BLOCKSTATE.getValue(UP)) {
@@ -117,30 +105,20 @@ public class FireBlock extends BaseFireBlock {
    }
 
    /************************************************************************************
-    * Functions for updating blocks
+    * Part 3. Functions for Updating Blocks
     ************************************************************************************/
 
-
-   /**
-    * Section: Block Updates
-    * Handles block updates when adjacent blocks change.
-    */
+   /* Section 3.1: Block Updates */
    public BlockState updateShape(BlockState p_53458_, Direction p_53459_, BlockState p_53460_, LevelAccessor p_53461_, BlockPos BLOCKPOSITION, BlockPos p_53463_) {
       return this.canSurvive(p_53458_, p_53461_, BLOCKPOSITION) ? this.getStateWithAge(p_53461_, BLOCKPOSITION, p_53458_.getValue(AGE)) : Blocks.AIR.defaultBlockState();
    }
 
-   /**
-    * Section: Shape Retrieval
-    * Retrieves the shape of the fire block for rendering or collision.
-    */
+   /* Section 3.2: Shape Retrieval */
    public VoxelShape getShape(BlockState p_53474_, BlockGetter p_53475_, BlockPos BLOCKPOSITION, CollisionContext p_53477_) {
       return this.shapesCache.get(p_53474_.setValue(AGE, Integer.valueOf(0)));
    }
 
-   /**
-    * Section: Placement State
-    * Determines the block state during placement.
-    */
+   /* Section 3.3: Placement State */
    public BlockState getStateForPlacement(BlockPlaceContext p_53427_) {
       return this.getStateForPlacement(p_53427_.getLevel(), p_53427_.getClickedPos());
    }
@@ -164,26 +142,17 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
-   /**
-    * Section: Survival Check
-    * Determines if the fire block can remain in its current position.
-    */
+   /* Section 3.4: Survival Check */
    public boolean canSurvive(BlockState p_53454_, LevelReader LEVELREADER, BlockPos BLOCKPOSITION) {
       BlockPos blockpos = BLOCKPOSITION.below();
       return LEVELREADER.getBlockState(blockpos).isFaceSturdy(LEVELREADER, blockpos, Direction.UP) || this.isValidFireLocation(LEVELREADER, BLOCKPOSITION);
    }
 
-
    /************************************************************************************
-    * Fire Behaviour and Logic
+    * Part 4. Fire Behaviour and Logic
     ************************************************************************************/
 
-   /**
-    * Section: Fire Ticking
-    * Implements the ticking behavior for fire blocks,
-    * including spreading and
-    * extinguishing.
-    */
+   /* Section 4.1: Fire Ticking */
    public void tick(BlockState BLOCKSTATE, ServerLevel SERVERLEVEL, BlockPos BLOCKPOSITION, RandomSource RANDOMSOURCE) {
       SERVERLEVEL.scheduleTick(BLOCKPOSITION, this, getFireTickDelay(SERVERLEVEL.random));     /// 1. Schedule Next Tick
       if (SERVERLEVEL.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) {            /// 2. Check Fire-Tick Game Rule
@@ -239,8 +208,8 @@ public class FireBlock extends BaseFireBlock {
             BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
 
             /**
-             * three-dimensional spread of fire from the current fire block
-             * where OFFSET_X, OFFSET_Z, and OFFSET_Y represent offsets in X, Z, and Y directions, respectively
+             * 8. Three-Dimensional Spread of Fire
+             * (OFFSET_X, OFFSET_Z, OFFSET_Y represent offsets in X, Z, and Y directions, respectively)
              */
             for (int OFFSET_X = -1; OFFSET_X <= 1; ++OFFSET_X) {                     /// OFFSET_X (-1 to 1): X-axis (left/right relative to the fire block).
                for (int OFFSET_Z = -1; OFFSET_Z <= 1; ++OFFSET_Z) {               /// OFFSET_Z (-1 to 1): Z-axis (forward/backward relative to the fire block).
@@ -274,19 +243,12 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
-   /**
-    * Section: Rain Detection
-    * Checks if the fire block is near rain, which can extinguish it.
-    */
+   /* Section 4.2: Rain Detection */
    protected boolean isNearRain(Level LEVEL, BlockPos BLOCKPOSITION) {
       return LEVEL.isRainingAt(BLOCKPOSITION) || LEVEL.isRainingAt(BLOCKPOSITION.west()) || LEVEL.isRainingAt(BLOCKPOSITION.east()) || LEVEL.isRainingAt(BLOCKPOSITION.north()) || LEVEL.isRainingAt(BLOCKPOSITION.south());
    }
 
-   /**
-    * Section: Burn and Ignite Odds
-    * Retrieves the odds of a block burning.
-    * Directly checks if the specific block represented by the BlockState has an ignition probability, returning 0 if the block is waterlogged.
-    */
+   /* Section 4.3: Burn and Ignite Odds */
    private int getBurnOdds(BlockState BLOCKSTATE) {
       return BLOCKSTATE.hasProperty(BlockStateProperties.WATERLOGGED) &&
               BLOCKSTATE.getValue(BlockStateProperties.WATERLOGGED)
@@ -301,11 +263,7 @@ public class FireBlock extends BaseFireBlock {
               : this.igniteOdds.getInt(BLOCKSTATE_IGNITE.getBlock());
    }
 
-   /**
-    * Section: Burn Check
-    * Handles burning logic for nearby flammable blocks.
-    * Related to section 7b
-    */
+   /* Section 4.4: Burn Check (for adjacent blocks) */
    private void checkBurnOut(Level LEVEL, BlockPos ADJACENTBLOCKPOSITION, int SPREADCHANCE, RandomSource RANDOMSOURCE, int FIREAGE) {
       int ADJACENT_BURN_ODDS = this.getBurnOdds(LEVEL.getBlockState(ADJACENTBLOCKPOSITION));                             /// Check the Burn Odds of the Block
       if (RANDOMSOURCE.nextInt(SPREADCHANCE) < ADJACENT_BURN_ODDS) {                                                   /// Random Chance for Ignition
@@ -331,19 +289,13 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
-   /**
-    * Section: State Updates
-    * Retrieves the updated block state based on its age.
-    */
+   /* Section 4.5: State Updates */
    private BlockState getStateWithAge(LevelAccessor LEVELACCESSOR, BlockPos BLOCKPOSITION, int FIREAGE) {
       BlockState BLOCKSTATE = getState(LEVELACCESSOR, BLOCKPOSITION);
       return BLOCKSTATE.is(Blocks.FIRE) ? BLOCKSTATE.setValue(AGE, Integer.valueOf(FIREAGE)) : BLOCKSTATE;
    }
 
-   /**
-    * Section: Fire Location Validation
-    * Checks if the fire block is in a valid location to burn.
-    */
+   /* Section 4.6: Fire Location Validation */
    private boolean isValidFireLocation(BlockGetter BLOCKGETTER, BlockPos BLOCKPOSITION) {
       for (Direction direction : Direction.values()) {
          if (this.canBurn(BLOCKGETTER.getBlockState(BLOCKPOSITION.relative(direction)))) {
@@ -354,14 +306,7 @@ public class FireBlock extends BaseFireBlock {
       return false;
    }
 
-   /**
-    * Section: Ignition Odds Calculation
-    * Calculates the odds of igniting nearby blocks based on their properties.
-    * -
-    * This checks all six adjacent positions (north, south, east, west, above, below)
-    * for flammable blocks and returns the highest ignition odds among them.
-    * If the position itself is not empty, it returns 0 (indicating no ignition is possible).
-    */
+   /* Section 4.7: Ignition Odds Calculation */
    private int getIgniteOdds_Adjacent(LevelReader LEVELREADER, BlockPos BLOCKPOSITION) { // if it is an empty block it will look at its surrounding blocks
       if (!LEVELREADER.isEmptyBlock(BLOCKPOSITION)) {
          return 0;
@@ -377,58 +322,38 @@ public class FireBlock extends BaseFireBlock {
       }
    }
 
-   /**
-    * Section: Burn Check
-    * Determines if the block is flammable and can burn.
-    */
+   /* Section 4.8: Burn Check (Determining if a block can burn) */
    protected boolean canBurn(BlockState BLOCKSTATE) {
       return this.getIgniteOdds1(BLOCKSTATE) > 0;
    }
 
-   /**
-    * Section: Placement Handling
-    * Schedules the fire block to tick when it is placed.
-    */
+   /* Section 4.9: Placement Handling */
    public void onPlace(BlockState BLOCKSTATE_PLACEMENT, Level LEVEL, BlockPos BLOCKPOSITION_PLACEMENT, BlockState ADJACENT_BLOCKSTATE_PLACEMENT, boolean ISPLACEMENTVALID) {
       super.onPlace(BLOCKSTATE_PLACEMENT, LEVEL, BLOCKPOSITION_PLACEMENT, ADJACENT_BLOCKSTATE_PLACEMENT, ISPLACEMENTVALID);
       LEVEL.scheduleTick(BLOCKPOSITION_PLACEMENT, this, getFireTickDelay(LEVEL.random));
    }
 
-   /**
-    * Section: Fire Tick Delay
-    * Determines the delay between fire block ticks.
-    */
+   /* Section 4.10: Fire Tick Delay */
    private static int getFireTickDelay(RandomSource RANDOMSOURCE) {
       return 30 + RANDOMSOURCE.nextInt(10);
    }
 
-   /**
-    * Section: Block State Definition
-    * Defines the possible states of the fire block.
-    */
+   /* Section 4.11: Block State Definition */
    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> BLOCKSTATEDEFINITIONBUILDER) {
       BLOCKSTATEDEFINITIONBUILDER.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
    }
 
    /************************************************************************************
-    * Initialisation again
+    * Part 5. Bootstrapping & Flammability Settings
     ************************************************************************************/
 
-   /**
-    * Section: Flammability Settings
-    * Configures the flammability properties for various blocks. using the section below this.
-    * Essentially for block, add the ignite and burn odds as features
-    */
+   /* Section 5.1: Flammability Settings */
    private void setFlammable(Block BLOCK, int IGNITE_ODDS, int BURN_ODDS) {
       this.igniteOdds.put(BLOCK, IGNITE_ODDS);
       this.burnOdds.put(BLOCK, BURN_ODDS);
    }
 
-   /**
-    * Section: Initialization
-    * Sets the flammability of specific blocks when the FireBlock is loaded.
-    * 446: ignite    447: burn
-    */
+   /* Section 5.2: Initialization */
    public static void bootStrap() {
       FireBlock fireblock = (FireBlock)Blocks.FIRE;
       fireblock.setFlammable(Blocks.OAK_PLANKS, 5, 20);
