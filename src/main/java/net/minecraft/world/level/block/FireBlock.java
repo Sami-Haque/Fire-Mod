@@ -46,10 +46,14 @@ public class FireBlock extends BaseFireBlock {
    public static final BooleanProperty SOUTH = PipeBlock.SOUTH;
    public static final BooleanProperty WEST = PipeBlock.WEST;
    public static final BooleanProperty UP = PipeBlock.UP;
-   private static int fireTickCounter = 0; // for the HUD
    private static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_53467_) -> {
       return p_53467_.getKey() != Direction.DOWN;
    }).collect(Util.toMap());
+
+// EDITS TO CODE I MAKE
+   private static int fireTickCounter = 0; // for the HUD
+   private static final boolean ENABLE_VERTICAL_FIRE_SPREAD = false; // false = 2D spread only, true = full 3D spread
+
 
    /* Section 1.2: Voxel Shapes */
    private static final VoxelShape UP_AABB = Block.box(0.0D, 15.0D, 0.0D, 16.0D, 16.0D, 16.0D);
@@ -215,8 +219,12 @@ public class FireBlock extends BaseFireBlock {
 
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.east(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);        /// (b) Spread to Adjacent Blocks
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.west(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);              /// see Section: Burn Check
-            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
-            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+//            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE); EDITS
+//            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+            if (ENABLE_VERTICAL_FIRE_SPREAD) {
+               this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+               this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
+            }
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.north(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.south(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
             BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
@@ -225,11 +233,15 @@ public class FireBlock extends BaseFireBlock {
              * 8. Three-Dimensional Spread of Fire
              * (OFFSET_X, OFFSET_Z, OFFSET_Y represent offsets in X, Z, and Y directions, respectively)
              */
-            for (int OFFSET_X = -1; OFFSET_X <= 1; ++OFFSET_X) {                     /// OFFSET_X (-1 to 1): X-axis (left/right relative to the fire block).
-               for (int OFFSET_Z = -1; OFFSET_Z <= 1; ++OFFSET_Z) {               /// OFFSET_Z (-1 to 1): Z-axis (forward/backward relative to the fire block).
-                  for (int OFFSET_Y = -1; OFFSET_Y <= 4; ++OFFSET_Y) {            /// OFFSET_Y (-1 to 4): Y-axis (up/down relative to the fire block; includes further upwards range).
+            ///**************** EDITS
+            int startY = ENABLE_VERTICAL_FIRE_SPREAD ? -1 : 0;
+            int endY = ENABLE_VERTICAL_FIRE_SPREAD ? 4 : 0;
+            for (int OFFSET_X = -1; OFFSET_X <= 1; ++OFFSET_X) {
+               for (int OFFSET_Z = -1; OFFSET_Z <= 1; ++OFFSET_Z) {
+                  for (int OFFSET_Y = startY; OFFSET_Y <= endY; ++OFFSET_Y) {
+                     if (OFFSET_X != 0 || OFFSET_Y != 0 || OFFSET_Z != 0) {
+                        /// ********************************
 
-                     if (OFFSET_X != 0 || OFFSET_Y != 0 || OFFSET_Z != 0) {          /// Exclude the Fire Block Itself
                         int BASE_SPREAD_CHANCE = 100;                             /// BASE_SPREAD_CHANCE is a base spread chance, starting at 100.
                         if (OFFSET_Y > 1) {
                            BASE_SPREAD_CHANCE += (OFFSET_Y - 1) * 100;                  /// For positions higher than 1 block above (OFFSET_Y > 1), the spread chance is reduced (higher BASE_SPREAD_CHANCE values make spread less likely).
