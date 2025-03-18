@@ -28,6 +28,11 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+// Adding in lines for custom HUD
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.chat.Component;
+
+
 /************************************************************************************
  * Part 1. Configuration & Constants
  ************************************************************************************/
@@ -41,6 +46,7 @@ public class FireBlock extends BaseFireBlock {
    public static final BooleanProperty SOUTH = PipeBlock.SOUTH;
    public static final BooleanProperty WEST = PipeBlock.WEST;
    public static final BooleanProperty UP = PipeBlock.UP;
+   private static int fireTickCounter = 0; // for the HUD
    private static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_53467_) -> {
       return p_53467_.getKey() != Direction.DOWN;
    }).collect(Util.toMap());
@@ -155,6 +161,14 @@ public class FireBlock extends BaseFireBlock {
    /* Section 4.1: Fire Ticking */
    public void tick(BlockState BLOCKSTATE, ServerLevel SERVERLEVEL, BlockPos BLOCKPOSITION, RandomSource RANDOMSOURCE) {
       SERVERLEVEL.scheduleTick(BLOCKPOSITION, this, getFireTickDelay(SERVERLEVEL.random));     /// 1. Schedule Next Tick
+
+/// *******************************     FireCount Tick for HUD
+//      fireTickCounter++;
+//      for (ServerPlayer player : SERVERLEVEL.getPlayers(p -> true)) {
+//         player.displayClientMessage(Component.literal("Fire Tick Count: " + fireTickCounter), true);
+//      }
+/// *******************************     ^^^^^^^ FireCount Tick for HUD ^^^^^^^^^^^^^^^
+
       if (SERVERLEVEL.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) {            /// 2. Check Fire-Tick Game Rule
          if (!BLOCKSTATE.canSurvive(SERVERLEVEL, BLOCKPOSITION)) {                            /// 3. Check if Fire Can Survive (removes fire if not valid area via multiple checking functions to adjacent blocks)
             SERVERLEVEL.removeBlock(BLOCKPOSITION, false);
@@ -335,7 +349,8 @@ public class FireBlock extends BaseFireBlock {
 
    /* Section 4.10: Fire Tick Delay */
    private static int getFireTickDelay(RandomSource RANDOMSOURCE) {
-      return 30 + RANDOMSOURCE.nextInt(10);
+//      return 30 + RANDOMSOURCE.nextInt(10);
+      return 20; // fixed delay: one second (20 ticks)
    }
 
    /* Section 4.11: Block State Definition */
