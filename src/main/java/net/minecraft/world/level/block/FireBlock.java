@@ -39,8 +39,12 @@ import net.minecraft.network.chat.Component;
 
 /* Section 1.1: Constants and Properties */
 public class FireBlock extends BaseFireBlock {
-   public static final int MAX_AGE = 15;
-   public static final IntegerProperty AGE = BlockStateProperties.AGE_15;
+   public static final int MAX_AGE = 45;  ///EDIT
+   public static final int ORIGINAL_MAX_AGE = 15;  ///EDIT
+   public static final int SCALE_AGE = (int)MAX_AGE / ORIGINAL_MAX_AGE;  ///EDIT this is 3 when MAX_AGE = 45
+//   public static final IntegerProperty AGE = BlockStateProperties.AGE_15;   /// EDIT
+//   public static final IntegerProperty AGE = BlockStateProperties.AGE_45;   /// EDIT: Added line in BlockStateProperties.java
+   public static final IntegerProperty AGE = IntegerProperty.create("age", 0, MAX_AGE);
    public static final BooleanProperty NORTH = PipeBlock.NORTH;
    public static final BooleanProperty EAST = PipeBlock.EAST;
    public static final BooleanProperty SOUTH = PipeBlock.SOUTH;
@@ -188,12 +192,16 @@ public class FireBlock extends BaseFireBlock {
 
 
          int FIREAGE = BLOCKSTATE.getValue(AGE);       /// NOTE: FIREAGE = AGE
+         float normalisedAge = FIREAGE / (float)SCALE_AGE;   ///EDIT: added for scale for below line
 
-         if (!IS_INFINITE_BURN_AREA && SERVERLEVEL.isRaining() && this.isNearRain(SERVERLEVEL, BLOCKPOSITION) && RANDOMSOURCE.nextFloat() < 0.2F + (float)FIREAGE * 0.03F) {
+         if (!IS_INFINITE_BURN_AREA
+                 && SERVERLEVEL.isRaining()
+                 && this.isNearRain(SERVERLEVEL, BLOCKPOSITION)
+                 && RANDOMSOURCE.nextFloat() < 0.2F + normalisedAge * 0.03F) {     /// EDIT: scaled normalised age
             SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                                   /// (b) Extinguish Fire in Rain (Random chance based on the fire's AGE property.)
          } else {
 //            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);        /// 5. Update Fire's Age (there is a 1/3 chance it increases by 1 as options are 0, 0.5, 1 and INT rounds ro 0, 0, 1) /// EDIT
-            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + 1);                        /// Age increases by 1 every tick
+            int UPDATED_1FIREAGE1 = Math.min(MAX_AGE, FIREAGE + 1);                        /// EDIT: Age increases by 1 every tick
             if (FIREAGE != UPDATED_1FIREAGE1) {
                BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_1FIREAGE1));
                SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 4);
@@ -202,14 +210,14 @@ public class FireBlock extends BaseFireBlock {
             if (!IS_INFINITE_BURN_AREA) {                                                               /// 6. Validate Fire Location
                if (!this.isValidFireLocation(SERVERLEVEL, BLOCKPOSITION)) {                  /// (a) Check if Fire Location is Valid
                   BlockPos blockpos = BLOCKPOSITION.below();
-                  if (!SERVERLEVEL.getBlockState(blockpos).isFaceSturdy(SERVERLEVEL, blockpos, Direction.UP) || FIREAGE > 3) {
+                  if (!SERVERLEVEL.getBlockState(blockpos).isFaceSturdy(SERVERLEVEL, blockpos, Direction.UP) || FIREAGE > (3*SCALE_AGE)) {      /// EDIT: Original~ FIREAGE > 3)
                      SERVERLEVEL.removeBlock(BLOCKPOSITION, false);
                   }
 
                   return;
                }
 
-               if (FIREAGE == 15 && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) {
+               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) {
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
                   return;
                }
@@ -254,7 +262,7 @@ public class FireBlock extends BaseFireBlock {
                         blockpos$mutableblockpos.setWithOffset(BLOCKPOSITION, OFFSET_X, OFFSET_Y, OFFSET_Z);
                         int IGNITE_ODDS = this.getIgniteOdds_Adjacent(SERVERLEVEL, blockpos$mutableblockpos);
                         if (IGNITE_ODDS > 0) {                             /// Only flammable blocks (IGNITE_ODDS > 0) proceed further.
-                           int IGNITE_ODDS_ADJUSTED = (IGNITE_ODDS + 40 + SERVERLEVEL.getDifficulty().getId() * 7) / (FIREAGE + 30);
+                           int IGNITE_ODDS_ADJUSTED = ((IGNITE_ODDS + 40 + SERVERLEVEL.getDifficulty().getId() * 7) * SCALE_AGE)/ (FIREAGE + 30*SCALE_AGE);   /// SERVERLEVEL.getDifficulty().getId(): 0 = Peaceful, 1 = Easy, 2 = Normal, 3 = Hard
                            if (IS_INCREASED_BURNOUT_BIOME) {                                    /// If IS_INCREASED_BURNOUT_BIOME (biome with INCREASED_FIRE_BURNOUT), the chance is halved
                               IGNITE_ODDS_ADJUSTED /= 2;
                            }
@@ -304,7 +312,7 @@ public class FireBlock extends BaseFireBlock {
 
 
          // Handle fire ignition or removal
-         if (RANDOMSOURCE.nextInt(FIREAGE + 10) < 5                /// The fire's age influences this randomness; older fire may spread more slowly.
+         if (RANDOMSOURCE.nextInt(FIREAGE + 10 * SCALE_AGE) < (5 * SCALE_AGE)                /// The fire's age influences this randomness; older fire may spread more slowly.
                  && !LEVEL.isRainingAt(ADJACENTBLOCKPOSITION)) {          /// Prevents ignition if the block is exposed to rain.
 //            int UPDATED_3FIREAGE3 = Math.min(FIREAGE + RANDOMSOURCE.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block   EDIT
             int UPDATED_3FIREAGE3 = 0;       /// EDIT

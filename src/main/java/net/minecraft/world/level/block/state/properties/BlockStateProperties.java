@@ -84,6 +84,7 @@ public class BlockStateProperties {
    public static final IntegerProperty AGE_7 = IntegerProperty.create("age", 0, 7);
    public static final IntegerProperty AGE_15 = IntegerProperty.create("age", 0, 15);
    public static final IntegerProperty AGE_25 = IntegerProperty.create("age", 0, 25);
+   public static final IntegerProperty AGE_45 = IntegerProperty.create("age", 0, 45); ///EDIT
    public static final IntegerProperty BITES = IntegerProperty.create("bites", 0, 6);
    public static final IntegerProperty CANDLES = IntegerProperty.create("candles", 1, 4);
    public static final IntegerProperty DELAY = IntegerProperty.create("delay", 1, 4);
