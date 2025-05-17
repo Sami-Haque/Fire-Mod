@@ -192,7 +192,8 @@ public class FireBlock extends BaseFireBlock {
          if (!IS_INFINITE_BURN_AREA && SERVERLEVEL.isRaining() && this.isNearRain(SERVERLEVEL, BLOCKPOSITION) && RANDOMSOURCE.nextFloat() < 0.2F + (float)FIREAGE * 0.03F) {
             SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                                   /// (b) Extinguish Fire in Rain (Random chance based on the fire's AGE property.)
          } else {
-            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);                        /// 5. Update Fire's Age
+//            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);        /// 5. Update Fire's Age (there is a 1/3 chance it increases by 1 as options are 0, 0.5, 1 and INT rounds ro 0, 0, 1) /// EDIT
+            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + 1);                        /// Age increases by 1 every tick
             if (FIREAGE != UPDATED_1FIREAGE1) {
                BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_1FIREAGE1));
                SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 4);
