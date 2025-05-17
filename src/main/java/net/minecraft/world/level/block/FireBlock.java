@@ -184,7 +184,7 @@ public class FireBlock extends BaseFireBlock {
          BlockState ADJACENTBLOCKSTATE = SERVERLEVEL.getBlockState(BLOCKPOSITION.below());           /// 4. Check for Extinguishing Conditions
          boolean IS_INFINITE_BURN_AREA = ADJACENTBLOCKSTATE.is(SERVERLEVEL.dimensionType().infiniburn());         /// (a) Determine if Block is in an "Infinite Burn" Area
 //         boolean IS_INFINITE_BURN_AREA = ADJACENTBLOCKSTATE.is(SERVERLEVEL.dimensionType().infiniburn())
-//                 || ADJACENTBLOCKSTATE.is(Blocks.STONE);
+//                 || ADJACENTBLOCKSTATE.is(Blocks.STONE);           /// Was purely for Hazecraft Aesthetics in logo 1st draft
 
 
          int FIREAGE = BLOCKSTATE.getValue(AGE);       /// NOTE: FIREAGE = AGE
@@ -560,10 +560,21 @@ public class FireBlock extends BaseFireBlock {
       fireblock.setFlammable(Blocks.SMALL_DRIPLEAF, 60, 100);
       fireblock.setFlammable(Blocks.HANGING_ROOTS, 30, 60);
       fireblock.setFlammable(Blocks.GLOW_LICHEN, 15, 100);
+
       ///  EDIT: Adjust these 4 Wools to simulate the relevant blocks above for better visualisation
-      fireblock.setFlammable(Blocks.PURPLE_WOOL, 60, 20);      /// 1st Quadrant
-      fireblock.setFlammable(Blocks.GREEN_WOOL, 30, 60);       /// 2nd Quadrant
-      fireblock.setFlammable(Blocks.PINK_WOOL, 5, 20);        /// 3rd Quadrant
-      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 5, 5);  /// 4th Quadrant
+
+
+      ///1st Quadrant
+      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log
+
+      /// 2nd Quadrant
+      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Dead Bush
+
+      /// 3rd Quadrant
+      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block
+
+      /// 4th Quadrant
+      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves
+
    }
 }
