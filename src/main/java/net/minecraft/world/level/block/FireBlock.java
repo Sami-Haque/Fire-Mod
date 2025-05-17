@@ -204,7 +204,7 @@ public class FireBlock extends BaseFireBlock {
             int UPDATED_1FIREAGE1 = Math.min(MAX_AGE, FIREAGE + 1);                        /// EDIT: Age increases by 1 every tick
             if (FIREAGE != UPDATED_1FIREAGE1) {
                BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_1FIREAGE1));
-               SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 4);
+               SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 3);
             }
 
             if (!IS_INFINITE_BURN_AREA) {                                                               /// 6. Validate Fire Location
