@@ -364,8 +364,8 @@ public class FireBlock extends BaseFireBlock {
 
    /* Section 4.10: Fire Tick Delay */
    private static int getFireTickDelay(RandomSource RANDOMSOURCE) {
-//      return 30 + RANDOMSOURCE.nextInt(10);
-      return 20; // fixed delay: one second (20 ticks)
+//      return 30 + RANDOMSOURCE.nextInt(10);      ///EDIT
+      return 20; // fixed delay: one second (20 ticks)         ///EDIT
    }
 
    /* Section 4.11: Block State Definition */
