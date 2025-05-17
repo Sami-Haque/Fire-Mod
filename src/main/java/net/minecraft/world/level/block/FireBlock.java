@@ -192,9 +192,9 @@ public class FireBlock extends BaseFireBlock {
          if (!IS_INFINITE_BURN_AREA && SERVERLEVEL.isRaining() && this.isNearRain(SERVERLEVEL, BLOCKPOSITION) && RANDOMSOURCE.nextFloat() < 0.2F + (float)FIREAGE * 0.03F) {
             SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                                   /// (b) Extinguish Fire in Rain (Random chance based on the fire's AGE property.)
          } else {
-            int UPDATED_FIREAGE = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);                        /// 5. Update Fire's Age
-            if (FIREAGE != UPDATED_FIREAGE) {
-               BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_FIREAGE));
+            int UPDATED_1FIREAGE1 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(3) / 2);                        /// 5. Update Fire's Age
+            if (FIREAGE != UPDATED_1FIREAGE1) {
+               BLOCKSTATE = BLOCKSTATE.setValue(AGE, Integer.valueOf(UPDATED_1FIREAGE1));
                SERVERLEVEL.setBlock(BLOCKPOSITION, BLOCKSTATE, 4);
             }
 
@@ -224,7 +224,7 @@ public class FireBlock extends BaseFireBlock {
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.west(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);              /// see Section: Burn Check
 //            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE); EDITS
 //            this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
-            if (ENABLE_VERTICAL_FIRE_SPREAD) {
+            if (ENABLE_VERTICAL_FIRE_SPREAD) {  /// EDIT
                this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.below(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
                this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.above(), 250 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
             }
@@ -259,7 +259,8 @@ public class FireBlock extends BaseFireBlock {
                            }
 
                            if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
-                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);
+//                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);  /// EDIT
+                              int UPDATED_2FIREAGE2 = 0; ///EDIT to 0??
                               SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_2FIREAGE2
                            }
                         }
@@ -304,8 +305,9 @@ public class FireBlock extends BaseFireBlock {
          // Handle fire ignition or removal
          if (RANDOMSOURCE.nextInt(FIREAGE + 10) < 5                /// The fire's age influences this randomness; older fire may spread more slowly.
                  && !LEVEL.isRainingAt(ADJACENTBLOCKPOSITION)) {          /// Prevents ignition if the block is exposed to rain.
-            int UPDATED_FIREAGE = Math.min(FIREAGE + RANDOMSOURCE.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block
-            LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_FIREAGE), 3);
+//            int UPDATED_3FIREAGE3 = Math.min(FIREAGE + RANDOMSOURCE.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block   EDIT
+            int UPDATED_3FIREAGE3 = 0;       /// EDIT
+            LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_3FIREAGE3), 3);
          } else {
             LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed.
          }
