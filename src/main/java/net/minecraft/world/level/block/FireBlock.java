@@ -218,7 +218,7 @@ public class FireBlock extends BaseFireBlock {
                }
                               /// EDIT
                if (FIREAGE == MAX_AGE                                                        /// If the fire age is at max age
-                       && RANDOMSOURCE.nextInt(2) == 0                                       ///  1 in 4 chance for it to remove the fire block
+                       && RANDOMSOURCE.nextInt(4) == 0                                       ///  1 in 4 chance for it to remove the fire block
                        && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (NOT THE BLOCK BELOW)
                   return;
