@@ -217,7 +217,7 @@ public class FireBlock extends BaseFireBlock {
                   return;
                }
 
-               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { EDIT
+               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { ///EDIT
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
                   return;
                }
