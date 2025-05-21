@@ -210,7 +210,8 @@ public class FireBlock extends BaseFireBlock {
             if (!IS_INFINITE_BURN_AREA) {                                                               /// 6. Validate Fire Location
                if (!this.isValidFireLocation(SERVERLEVEL, BLOCKPOSITION)) {                  /// (a) Check if Fire Location is Valid
                   BlockPos blockpos = BLOCKPOSITION.below();
-                  if (!SERVERLEVEL.getBlockState(blockpos).isFaceSturdy(SERVERLEVEL, blockpos, Direction.UP) || FIREAGE > (3*SCALE_AGE)) {      /// EDIT: Original~ FIREAGE > 3)
+                  if (!SERVERLEVEL.getBlockState(blockpos).isFaceSturdy(SERVERLEVEL, blockpos, Direction.UP)
+                          || FIREAGE > (3*SCALE_AGE)) {      /// EDIT: Original~ FIREAGE > 3). KILL LONELY FIRE AT AGE 10 EVERY TIME!!
                      SERVERLEVEL.removeBlock(BLOCKPOSITION, false);
                   }
 
@@ -218,7 +219,7 @@ public class FireBlock extends BaseFireBlock {
                }
                               /// EDIT
                if (FIREAGE == MAX_AGE                                                        /// If the fire age is at max age
-                       && RANDOMSOURCE.nextInt(4) == 0                                       ///  1 in 4 chance for it to remove the fire block
+                       && RANDOMSOURCE.nextInt(1) == 0                                       ///  1 in 4 chance for it to remove the fire block
                        && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (NOT THE BLOCK BELOW)
                   return;
