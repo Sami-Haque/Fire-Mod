@@ -217,7 +217,7 @@ public class FireBlock extends BaseFireBlock {
                   return;
                }
 
-               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) {
+               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { EDIT
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
                   return;
                }
@@ -318,7 +318,7 @@ public class FireBlock extends BaseFireBlock {
             int UPDATED_3FIREAGE3 = 0;       /// EDIT
             LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_3FIREAGE3), 3);
          } else {
-            LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed.
+//            LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed. EDIT TO REMOVE
          }
 
          Block BLOCK = ADJACENTBLOCKSTATE.getBlock();
