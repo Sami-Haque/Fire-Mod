@@ -216,9 +216,11 @@ public class FireBlock extends BaseFireBlock {
 
                   return;
                }
-
-               if (FIREAGE == MAX_AGE && RANDOMSOURCE.nextInt(4) == 0 && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { ///EDIT
-                  SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (if at maximum age)
+                              /// EDIT
+               if (FIREAGE == MAX_AGE                                                        /// If the fire age is at max age
+                       && RANDOMSOURCE.nextInt(2) == 0                                       ///  1 in 4 chance for it to remove the fire block
+                       && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds
+                  SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (NOT THE BLOCK BELOW)
                   return;
                }
             }
