@@ -219,8 +219,8 @@ public class FireBlock extends BaseFireBlock {
                }
                               /// EDIT
                if (FIREAGE == MAX_AGE                                                        /// If the fire age is at max age
-                       && RANDOMSOURCE.nextInt(1) == 0                                       ///  1 in 4 chance for it to remove the fire block
-                       && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds
+//                       && RANDOMSOURCE.nextInt(4) == 0                                       /// nextInt(4): 1 in 4 chance for it to remove the fire block --> EDIT: nextInt(1) = 100% CHANCE
+                       && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds (non flammable block below)
                   SERVERLEVEL.removeBlock(BLOCKPOSITION, false);                             /// (b) Extinguish Fully Aged Fire (NOT THE BLOCK BELOW)
                   return;
                }
@@ -272,7 +272,7 @@ public class FireBlock extends BaseFireBlock {
 
                            if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
 //                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);  /// EDIT
-                              int UPDATED_2FIREAGE2 = 0; ///EDIT to 0??
+                              int UPDATED_2FIREAGE2 = 0; ///EDIT to 0
                               SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_2FIREAGE2
                            }
                         }
@@ -314,14 +314,15 @@ public class FireBlock extends BaseFireBlock {
          BlockState ADJACENTBLOCKSTATE = LEVEL.getBlockState(ADJACENTBLOCKPOSITION);
 
 
-         // Handle fire ignition or removal
+         // Handle fire ignition [or removal] - [commented out]
          if (RANDOMSOURCE.nextInt(FIREAGE + 10 * SCALE_AGE) < (5 * SCALE_AGE)                /// The fire's age influences this randomness; older fire may spread more slowly.
                  && !LEVEL.isRainingAt(ADJACENTBLOCKPOSITION)) {          /// Prevents ignition if the block is exposed to rain.
 //            int UPDATED_3FIREAGE3 = Math.min(FIREAGE + RANDOMSOURCE.nextInt(5) / 4, 15);       /// if logic above is true, Set Fire to the Block   EDIT
             int UPDATED_3FIREAGE3 = 0;       /// EDIT
-            LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_3FIREAGE3), 3);
+            LEVEL.setBlock(ADJACENTBLOCKPOSITION, this.getStateWithAge(LEVEL, ADJACENTBLOCKPOSITION, UPDATED_3FIREAGE3), 3); /// Ignition: Replaces whatever was at ADJACENTBLOCKPOSITION with a fire block whose AGE property is set to UPDATED_3FIREAGE3 (here 0)
          } else {
-//            LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed. EDIT TO REMOVE
+            /// BELOW IS ESSENTIAL TO REMOVE FOR MORE UNIFORM SPREAD (BLOCK MUST BE IGNITED BEFORE BEING CONSUMED)
+//            LEVEL.removeBlock(ADJACENTBLOCKPOSITION, false);              /// If the random chance fails or the block cannot ignite (e.g., due to rain), it is removed. /// EDIT: The adjacent block can't be removed before it is ignited.
          }
 
          Block BLOCK = ADJACENTBLOCKSTATE.getBlock();
