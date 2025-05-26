@@ -242,13 +242,13 @@ public class FireBlock extends BaseFireBlock {
             }
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.north(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
             this.checkBurnOut(SERVERLEVEL, BLOCKPOSITION.south(), 300 + BIOME_BURNOUT_EFFECT, RANDOMSOURCE, FIREAGE);
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
 
             /**
              * 8. Three-Dimensional Spread of Fire
              * (OFFSET_X, OFFSET_Z, OFFSET_Y represent offsets in X, Z, and Y directions, respectively)
              */
             ///**************** EDITS
+            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
             int startY = ENABLE_VERTICAL_FIRE_SPREAD ? -1 : 0;
             int endY = ENABLE_VERTICAL_FIRE_SPREAD ? 4 : 0;
             for (int OFFSET_X = -1; OFFSET_X <= 1; ++OFFSET_X) {
@@ -264,7 +264,7 @@ public class FireBlock extends BaseFireBlock {
 
                         blockpos$mutableblockpos.setWithOffset(BLOCKPOSITION, OFFSET_X, OFFSET_Y, OFFSET_Z);
                         int IGNITE_ODDS = this.getIgniteOdds_Adjacent(SERVERLEVEL, blockpos$mutableblockpos);
-                        if (IGNITE_ODDS > 0) {                             /// Only flammable blocks (IGNITE_ODDS > 0) proceed further.
+                        if (IGNITE_ODDS > 0) {                             /// ONLY IF the target air block has adjacent flammable blocks (IGNITE_ODDS > 0) it can proceed further.
                            int IGNITE_ODDS_ADJUSTED = ((IGNITE_ODDS + 40 + SERVERLEVEL.getDifficulty().getId() * 7) * SCALE_AGE)/ (FIREAGE + 30*SCALE_AGE);   /// SERVERLEVEL.getDifficulty().getId(): 0 = Peaceful, 1 = Easy, 2 = Normal, 3 = Hard
                            if (IS_INCREASED_BURNOUT_BIOME) {                                    /// If IS_INCREASED_BURNOUT_BIOME (biome with INCREASED_FIRE_BURNOUT), the chance is halved
                               IGNITE_ODDS_ADJUSTED /= 2;
@@ -273,7 +273,7 @@ public class FireBlock extends BaseFireBlock {
                            if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
 //                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);  /// EDIT
                               int UPDATED_2FIREAGE2 = 0; ///EDIT to 0
-                              SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the block with a fire block of age UPDATED_2FIREAGE2
+                              SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the EMPTY/AIR block with a fire block of age UPDATED_2FIREAGE2
                            }
                         }
                      }
@@ -352,7 +352,7 @@ public class FireBlock extends BaseFireBlock {
 
    /* Section 4.7: Ignition Odds Calculation */
    private int getIgniteOdds_Adjacent(LevelReader LEVELREADER, BlockPos BLOCKPOSITION) { // if it is an empty block it will look at its surrounding blocks
-      if (!LEVELREADER.isEmptyBlock(BLOCKPOSITION)) {
+      if (!LEVELREADER.isEmptyBlock(BLOCKPOSITION)) {                   // CHECKS IF THIS BLOCK IS AIR (So if it is not make it have no chance of ignition to not replace fuel)
          return 0;
       } else {
          int HIGHEST_IGNITION_ODDS = 0;
