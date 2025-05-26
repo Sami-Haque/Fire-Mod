@@ -270,7 +270,9 @@ public class FireBlock extends BaseFireBlock {
                               IGNITE_ODDS_ADJUSTED /= 2;
                            }
 
-                           if (IGNITE_ODDS_ADJUSTED > 0 && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos))) {
+                           if (IGNITE_ODDS_ADJUSTED > 0     /// Comment out next line to get 100% spread rate per second
+                                   && RANDOMSOURCE.nextInt(BASE_SPREAD_CHANCE) <= IGNITE_ODDS_ADJUSTED && (!SERVERLEVEL.isRaining() || !this.isNearRain(SERVERLEVEL, blockpos$mutableblockpos)))
+                           {
 //                              int UPDATED_2FIREAGE2 = Math.min(15, FIREAGE + RANDOMSOURCE.nextInt(5) / 4);  /// EDIT
                               int UPDATED_2FIREAGE2 = 0; ///EDIT to 0
                               SERVERLEVEL.setBlock(blockpos$mutableblockpos, this.getStateWithAge(SERVERLEVEL, blockpos$mutableblockpos, UPDATED_2FIREAGE2), 3);      /// Ignite the EMPTY/AIR block with a fire block of age UPDATED_2FIREAGE2
