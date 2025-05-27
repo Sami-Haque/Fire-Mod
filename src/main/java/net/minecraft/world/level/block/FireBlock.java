@@ -28,36 +28,28 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-// Imports for potential custom HUD (currently commented out in tick method)
-// import net.minecraft.server.level.ServerPlayer;
-// import net.minecraft.network.chat.Component;
-
-/************************************************************************************
- * Part 1. Configuration & Constants
- ************************************************************************************/
 public class FireBlock extends BaseFireBlock {
 
-   // --- User Edits: Age Configuration ---
-   public static final int MAX_AGE = 45; // Vanilla: 15
-   public static final int ORIGINAL_MAX_AGE = 15; // For scaling comparisons
-   public static final int SCALE_AGE = MAX_AGE / ORIGINAL_MAX_AGE; // Should be 3 if MAX_AGE is 45
+   public static final int MAX_AGE = 45;
+   public static final int ORIGINAL_MAX_AGE = 15;
+   public static final int SCALE_AGE = MAX_AGE / ORIGINAL_MAX_AGE; // = 3
 
    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, MAX_AGE);
-   // --- End User Edits ---
-
    public static final BooleanProperty NORTH = PipeBlock.NORTH;
    public static final BooleanProperty EAST = PipeBlock.EAST;
    public static final BooleanProperty SOUTH = PipeBlock.SOUTH;
    public static final BooleanProperty WEST = PipeBlock.WEST;
    public static final BooleanProperty UP = PipeBlock.UP;
-   private static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream().filter((p_53467_) -> {
-      return p_53467_.getKey() != Direction.DOWN;
-   }).collect(Util.toMap());
 
-   // --- User Edits: Custom Fields ---
-   // private static int fireTickCounter = 0; // For HUD, logic commented out in tick()
-   private static final boolean ENABLE_VERTICAL_FIRE_SPREAD = true; // Toggle for 3D spread aspects
-   // --- End User Edits ---
+   private static final Map<Direction, BooleanProperty> PROPERTY_BY_DIRECTION = PipeBlock.PROPERTY_BY_DIRECTION.entrySet().stream()
+           .filter(entry -> entry.getKey() != Direction.DOWN)
+           .collect(Util.toMap());
+
+   // Set to false for purely 2D flat plane spread as in the reference image
+   private static final boolean ENABLE_VERTICAL_FIRE_SPREAD_IN_3D_MECHANISM = false;
+   // This controls if trySpreadToAdjacent checks up/down. For flat plane fuel, up might still be relevant.
+   private static final boolean ENABLE_VERTICAL_ADJACENT_SPREAD = true;
+
 
    private static final VoxelShape UP_AABB = Block.box(0.0D, 15.0D, 0.0D, 16.0D, 16.0D, 16.0D);
    private static final VoxelShape WEST_AABB = Block.box(0.0D, 0.0D, 0.0D, 1.0D, 16.0D, 16.0D);
@@ -66,31 +58,15 @@ public class FireBlock extends BaseFireBlock {
    private static final VoxelShape SOUTH_AABB = Block.box(0.0D, 0.0D, 15.0D, 16.0D, 16.0D, 16.0D);
    private final Map<BlockState, VoxelShape> shapesCache;
 
-   // These constants are from vanilla, not directly used in the new probability formulas
-   // but retained for context if any other part of the code (e.g. BaseFireBlock) uses them.
-   // private static final int IGNITE_INSTANT = 60;
-   // private static final int IGNITE_EASY = 30;
-   // private static final int IGNITE_MEDIUM = 15;
-   // private static final int IGNITE_HARD = 5;
-   // private static final int BURN_INSTANT = 100;
-   // private static final int BURN_EASY = 60;
-   // private static final int BURN_MEDIUM = 20;
-   // private static final int BURN_HARD = 5;
+   private final Object2IntMap<Block> igniteOdds = new Object2IntOpenHashMap<>(); // Encouragement value for fire to spread to air *from* this block as a neighbor
+   private final Object2IntMap<Block> burnOdds = new Object2IntOpenHashMap<>();   // Flammability value of this block itself; higher means it's more likely to be affected by adjacent fire and contribute to ROS
 
-   private final Object2IntMap<Block> igniteOdds = new Object2IntOpenHashMap<>(); // How well this block can start a fire in an air block next to it
-   private final Object2IntMap<Block> burnOdds = new Object2IntOpenHashMap<>();   // How well this block can burn and be replaced by fire
-
-   /************************************************************************************
-    * Part 2. State Management & Visual Representation
-    ************************************************************************************/
    public FireBlock(BlockBehaviour.Properties properties) {
-      super(properties, 1.0F); // Second parameter is fireDamage
+      super(properties, 1.0F);
       this.registerDefaultState(this.stateDefinition.any()
               .setValue(AGE, 0)
-              .setValue(NORTH, false)
-              .setValue(EAST, false)
-              .setValue(SOUTH, false)
-              .setValue(WEST, false)
+              .setValue(NORTH, false).setValue(EAST, false)
+              .setValue(SOUTH, false).setValue(WEST, false)
               .setValue(UP, false));
       this.shapesCache = ImmutableMap.copyOf(this.stateDefinition.getPossibleStates().stream()
               .filter(state -> state.getValue(AGE) == 0)
@@ -104,12 +80,9 @@ public class FireBlock extends BaseFireBlock {
       if (blockState.getValue(SOUTH)) shape = Shapes.or(shape, SOUTH_AABB);
       if (blockState.getValue(EAST)) shape = Shapes.or(shape, EAST_AABB);
       if (blockState.getValue(WEST)) shape = Shapes.or(shape, WEST_AABB);
-      return shape.isEmpty() ? DOWN_AABB : shape; // DOWN_AABB is likely defined in BaseFireBlock or Block
+      return shape.isEmpty() ? DOWN_AABB : shape; // DOWN_AABB from BaseFireBlock
    }
 
-   /************************************************************************************
-    * Part 3. Functions for Updating Blocks (Largely Vanilla)
-    ************************************************************************************/
    @Override
    public BlockState updateShape(BlockState state, Direction facing, BlockState facingState, LevelAccessor level, BlockPos currentPos, BlockPos facingPos) {
       return this.canSurvive(state, level, currentPos) ? this.getStateWithAge(level, currentPos, state.getValue(AGE)) : Blocks.AIR.defaultBlockState();
@@ -117,8 +90,6 @@ public class FireBlock extends BaseFireBlock {
 
    @Override
    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      // Shapes are cached only for age 0 to prevent too many states in memory.
-      // Visual representation of fire age is typically handled by particles or texture animation, not different VoxelShapes per age.
       return this.shapesCache.get(state.setValue(AGE, 0));
    }
 
@@ -132,16 +103,15 @@ public class FireBlock extends BaseFireBlock {
       BlockState belowState = level.getBlockState(belowPos);
       if (this.canBurn(belowState) || belowState.isFaceSturdy(level, belowPos, Direction.UP)) {
          return this.defaultBlockState();
-      } else {
-         BlockState placementState = this.defaultBlockState();
-         for (Direction direction : Direction.values()) {
-            BooleanProperty property = PROPERTY_BY_DIRECTION.get(direction);
-            if (property != null) {
-               placementState = placementState.setValue(property, this.canBurn(level.getBlockState(pos.relative(direction))));
-            }
-         }
-         return placementState;
       }
+      BlockState placementState = this.defaultBlockState();
+      for (Direction direction : Direction.values()) {
+         BooleanProperty property = PROPERTY_BY_DIRECTION.get(direction);
+         if (property != null) {
+            placementState = placementState.setValue(property, this.canBurn(level.getBlockState(pos.relative(direction))));
+         }
+      }
+      return placementState;
    }
 
    @Override
@@ -156,49 +126,34 @@ public class FireBlock extends BaseFireBlock {
       level.scheduleTick(pos, this, getFireTickDelay(level.random));
    }
 
-   /************************************************************************************
-    * Part 4. Fire Behaviour and Logic
-    ************************************************************************************/
    @Override
    public void tick(BlockState blockState, ServerLevel serverLevel, BlockPos blockPos, RandomSource randomSource) {
-      serverLevel.scheduleTick(blockPos, this, getFireTickDelay(serverLevel.random)); // Schedule next tick
-
-      // --- User Edit: HUD Logic (currently commented out) ---
-      // fireTickCounter++;
-      // for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
-      //     player.displayClientMessage(Component.literal("Fire Tick Count: " + fireTickCounter), true); // True for action bar
-      // }
-      // --- End User Edit ---
+      serverLevel.scheduleTick(blockPos, this, getFireTickDelay(serverLevel.random));
 
       if (!serverLevel.getGameRules().getBoolean(GameRules.RULE_DOFIRETICK)) return;
-
       if (!blockState.canSurvive(serverLevel, blockPos)) {
          serverLevel.removeBlock(blockPos, false);
          return;
       }
 
-      // Extinguishing conditions
       boolean isInfiniteBurnArea = serverLevel.getBlockState(blockPos.below()).is(serverLevel.dimensionType().infiniburn());
       int currentFireAge = blockState.getValue(AGE);
 
-      // User's scaled rain extinguish chance
-      float normalizedAgeForRain = (float)currentFireAge / SCALE_AGE; // Effectively maps current age back to 0-15 range for this formula
+      float normalizedAgeForRain = (float) currentFireAge / SCALE_AGE;
       if (!isInfiniteBurnArea && serverLevel.isRaining() && this.isNearRain(serverLevel, blockPos) &&
               randomSource.nextFloat() < (0.2F + normalizedAgeForRain * 0.03F)) {
          serverLevel.removeBlock(blockPos, false);
          return;
       }
 
-      // Update fire's age - User's deterministic increase
-      int updatedFireAge = Math.min(MAX_AGE, currentFireAge + 1);
+      int updatedFireAge = Math.min(MAX_AGE, currentFireAge + 1); // Deterministic aging
       if (currentFireAge != updatedFireAge) {
          blockState = blockState.setValue(AGE, updatedFireAge);
-         serverLevel.setBlock(blockPos, blockState, Block.UPDATE_INVISIBLE); // Flag 4 is often used, 3 = send to client & update observers
-         currentFireAge = updatedFireAge; // Update for subsequent logic in this same tick
+         serverLevel.setBlock(blockPos, blockState, Block.UPDATE_INVISIBLE);
+         currentFireAge = updatedFireAge;
       }
 
       if (!isInfiniteBurnArea) {
-         // Extinguish lonely fire (scaled age)
          if (!this.isValidFireLocation(serverLevel, blockPos)) {
             BlockPos belowPos = blockPos.below();
             if (!serverLevel.getBlockState(belowPos).isFaceSturdy(serverLevel, belowPos, Direction.UP) || currentFireAge > (3 * SCALE_AGE)) {
@@ -206,65 +161,64 @@ public class FireBlock extends BaseFireBlock {
                return;
             }
          }
-         // Extinguish fully aged fire on non-flammable block (user removed randomness)
          if (currentFireAge == MAX_AGE && !this.canBurn(serverLevel.getBlockState(blockPos.below()))) {
-            serverLevel.removeBlock(blockPos, false);
+            serverLevel.removeBlock(blockPos, false); // Fire burns out on non-flammable base
             return;
          }
       }
 
-      // Spread fire
+      // --- Fire Spread Mechanics ---
       boolean isIncreasedBurnoutBiome = serverLevel.getBiome(blockPos).is(BiomeTags.INCREASED_FIRE_BURNOUT);
       int biomeBurnoutEffect = isIncreasedBurnoutBiome ? -50 : 0;
 
-      // Mechanism 1: Adjacent Block Burn (`checkBurnOut`)
-      // Horizontal spread
-      this.trySpreadToAdjacent(serverLevel, blockPos.east(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
-      this.trySpreadToAdjacent(serverLevel, blockPos.west(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
-      this.trySpreadToAdjacent(serverLevel, blockPos.north(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
-      this.trySpreadToAdjacent(serverLevel, blockPos.south(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
+      // Mechanism 1: Adjacent Block Spread (Main driver for 2D surface spread)
+      // SpreadChanceParam: Lower means easier spread. Base is 300 for horizontal, 250 for vertical.
+      // Biome effect makes it easier to spread in wet biomes by reducing this param.
+      this.trySpreadToAdjacentFuel(serverLevel, blockPos.east(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
+      this.trySpreadToAdjacentFuel(serverLevel, blockPos.west(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
+      this.trySpreadToAdjacentFuel(serverLevel, blockPos.north(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
+      this.trySpreadToAdjacentFuel(serverLevel, blockPos.south(), 300 + biomeBurnoutEffect, randomSource, currentFireAge);
 
-      // Vertical spread (conditional)
-      if (ENABLE_VERTICAL_FIRE_SPREAD) {
-         this.trySpreadToAdjacent(serverLevel, blockPos.below(), 250 + biomeBurnoutEffect, randomSource, currentFireAge);
-         this.trySpreadToAdjacent(serverLevel, blockPos.above(), 250 + biomeBurnoutEffect, randomSource, currentFireAge);
+      if (ENABLE_VERTICAL_ADJACENT_SPREAD) { // For spread to fuel blocks directly above/below
+         this.trySpreadToAdjacentFuel(serverLevel, blockPos.above(), 250 + biomeBurnoutEffect, randomSource, currentFireAge);
+         // Spreading down to fuel is less common in real surface fires unless embers drop, but kept for consistency.
+         this.trySpreadToAdjacentFuel(serverLevel, blockPos.below(), 250 + biomeBurnoutEffect, randomSource, currentFireAge);
       }
 
-      // Mechanism 2: 3D Air Block Ignition
-      BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-      int startY = ENABLE_VERTICAL_FIRE_SPREAD ? -1 : 0;
-      int endY = ENABLE_VERTICAL_FIRE_SPREAD ? (MAX_AGE / 10) : 0; // User: 4. Max Y spread based on max_age. Vanilla: 4 (max_age 15). 45/10 = 4. This matches original intent for range.
+
+      // Mechanism 2: 3D Air Block Ignition (Spread to nearby air blocks if they are adjacent to flammable material)
+      BlockPos.MutableBlockPos mutableTargetPos = new BlockPos.MutableBlockPos();
+      int startY_3D = ENABLE_VERTICAL_FIRE_SPREAD_IN_3D_MECHANISM ? -1 : 0;
+      int endY_3D = ENABLE_VERTICAL_FIRE_SPREAD_IN_3D_MECHANISM ? (MAX_AGE / 10) : 0; // Limits vertical seeking if enabled
 
       for (int offsetX = -1; offsetX <= 1; ++offsetX) {
          for (int offsetZ = -1; offsetZ <= 1; ++offsetZ) {
-            for (int offsetY = startY; offsetY <= endY; ++offsetY) {
-               if (offsetX == 0 && offsetY == 0 && offsetZ == 0) continue; // Skip source block
+            for (int offsetY = startY_3D; offsetY <= endY_3D; ++offsetY) {
+               if (offsetX == 0 && offsetY == 0 && offsetZ == 0) continue;
 
-               mutablePos.setWithOffset(blockPos, offsetX, offsetY, offsetZ);
+               mutableTargetPos.setWithOffset(blockPos, offsetX, offsetY, offsetZ);
 
-               if (serverLevel.isEmptyBlock(mutablePos)) { // Only spread to air blocks
-                  int igniteOddsFromNeighbors = this.getIgniteOddsFromNeighbors(serverLevel, mutablePos);
-                  if (igniteOddsFromNeighbors <= 0) continue; // Target air block must be next to flammable material
+               if (serverLevel.isEmptyBlock(mutableTargetPos)) {
+                  int encouragementFromNeighbors = this.getEncouragementFromNeighbors(serverLevel, mutableTargetPos);
+                  if (encouragementFromNeighbors <= 0) continue;
 
-                  int baseSpreadChanceDenominator = 100;
-                  if (offsetY > 1) { // More difficult to spread far upwards
-                     baseSpreadChanceDenominator += (offsetY - 1) * 100;
+                  int airSpreadResistance = 100; // Base resistance for air spread
+                  if (offsetY > 1) { // Harder to spread high into the air
+                     airSpreadResistance += (offsetY - 1) * 100;
                   }
 
-                  // User's scaled IGNITE_ODDS_ADJUSTED formula
-                  int difficulty = serverLevel.getDifficulty().getId(); // 0:P, 1:E, 2:N, 3:H
-                  int igniteChanceNumerator = ((igniteOddsFromNeighbors + 40 + difficulty * 7) * SCALE_AGE) / (currentFireAge + 30 * SCALE_AGE);
+                  int difficulty = serverLevel.getDifficulty().getId();
+                  // Chance for air to ignite, scaled by source fire age and neighbor encouragement
+                  int igniteAirChanceNumerator = ((encouragementFromNeighbors + 40 + difficulty * 7) * SCALE_AGE) / (currentFireAge + 30 * SCALE_AGE);
 
                   if (isIncreasedBurnoutBiome) {
-                     igniteChanceNumerator /= 2;
+                     igniteAirChanceNumerator /= 2;
                   }
 
-                  if (igniteChanceNumerator > 0 &&
-                          randomSource.nextInt(baseSpreadChanceDenominator) < igniteChanceNumerator && // Adjusted from <= to < to match K/N probability
-                          (!serverLevel.isRaining() || !this.isNearRain(serverLevel, mutablePos))) {
-
-                     // User's change: new fires start at age 0
-                     serverLevel.setBlock(mutablePos, this.getStateWithAge(serverLevel, mutablePos, 0), Block.UPDATE_ALL);
+                  if (igniteAirChanceNumerator > 0 &&
+                          randomSource.nextInt(airSpreadResistance) < igniteAirChanceNumerator &&
+                          (!serverLevel.isRaining() || !this.isNearRain(serverLevel, mutableTargetPos))) {
+                     serverLevel.setBlock(mutableTargetPos, this.getStateWithAge(serverLevel, mutableTargetPos, 0), Block.UPDATE_ALL); // New fire starts at age 0
                   }
                }
             }
@@ -273,101 +227,94 @@ public class FireBlock extends BaseFireBlock {
    }
 
    protected boolean isNearRain(Level level, BlockPos pos) {
-      return level.isRainingAt(pos) ||
-              level.isRainingAt(pos.west()) ||
-              level.isRainingAt(pos.east()) ||
-              level.isRainingAt(pos.north()) ||
-              level.isRainingAt(pos.south());
+      return level.isRainingAt(pos) || level.isRainingAt(pos.west()) || level.isRainingAt(pos.east()) || level.isRainingAt(pos.north()) || level.isRainingAt(pos.south());
    }
 
-   // Renamed from getBurnOdds to avoid confusion with the map field `burnOdds`
-   private int getBlockBurnChance(BlockState targetBlockState) {
-      if (targetBlockState.hasProperty(BlockStateProperties.WATERLOGGED) && targetBlockState.getValue(BlockStateProperties.WATERLOGGED)) {
-         return 0;
-      }
-      return this.burnOdds.getInt(targetBlockState.getBlock()); // This is ADJACENT_BURN_ODDS from user code
+   private int getFuelFlammability(BlockState fuelBlockState) { // Formerly getBlockBurnChance
+      if (fuelBlockState.hasProperty(BlockStateProperties.WATERLOGGED) && fuelBlockState.getValue(BlockStateProperties.WATERLOGGED)) return 0;
+      return this.burnOdds.getInt(fuelBlockState.getBlock()); // This is the key value for ROS from fuel type
    }
 
-   // Renamed from getIgniteOdds1 to avoid confusion
-   private int getBlockIgniteChance(BlockState neighborToAirBlockState) {
-      if (neighborToAirBlockState.hasProperty(BlockStateProperties.WATERLOGGED) && neighborToAirBlockState.getValue(BlockStateProperties.WATERLOGGED)) {
-         return 0;
-      }
-      return this.igniteOdds.getInt(neighborToAirBlockState.getBlock());
+   private int getNeighborEncouragement(BlockState neighborBlockState) { // Formerly getBlockIgniteChance
+      if (neighborBlockState.hasProperty(BlockStateProperties.WATERLOGGED) && neighborBlockState.getValue(BlockStateProperties.WATERLOGGED)) return 0;
+      return this.igniteOdds.getInt(neighborBlockState.getBlock()); // How much this block encourages fire in adjacent air
    }
 
-   // Renamed from checkBurnOut
-   private void trySpreadToAdjacent(Level level, BlockPos targetPos, int spreadChanceParam, RandomSource random, int sourceFireAge) {
-      int targetBlockBurnChance = this.getBlockBurnChance(level.getBlockState(targetPos)); // ADJACENT_BURN_ODDS
+   /**
+    * Attempts to spread fire to an adjacent fuel block.
+    * This is the primary mechanism for surface fire spread.
+    * Rate of Spread is heavily influenced by targetFuelFlammability (from burnOdds).
+    */
+   private void trySpreadToAdjacentFuel(Level level, BlockPos targetPos, int spreadResistanceParam, RandomSource random, int sourceFireAge) {
+      // Probability Step 1: Does the fire overcome the general resistance and target's flammability?
+      // P_Affect = targetFuelFlammability / spreadResistanceParam
+      // Higher targetFuelFlammability (burnOdds) means higher chance.
+      int targetFuelFlammability = this.getFuelFlammability(level.getBlockState(targetPos));
+      if (targetFuelFlammability <= 0) return; // Target isn't flammable or burnable by this mechanism
 
-      if (targetBlockBurnChance > 0 && random.nextInt(spreadChanceParam) < targetBlockBurnChance) {
+      if (random.nextInt(spreadResistanceParam) < targetFuelFlammability) {
          BlockState targetBlockState = level.getBlockState(targetPos);
 
-         // User's scaled "set fire condition"
-         // P_SetFireCond = (5 * SCALE_AGE) / (sourceFireAge + 10 * SCALE_AGE)
-         boolean shouldIgnite = random.nextInt(sourceFireAge + 10 * SCALE_AGE) < (5 * SCALE_AGE);
+         // Probability Step 2: If affected, does it actually turn into fire?
+         // This depends on the source fire's age (older fire might be "stronger").
+         // P_Ignite_Given_Affected = (5 * SCALE_AGE) / (sourceFireAge + 10 * SCALE_AGE)
+         boolean actuallyIgnites = random.nextInt(sourceFireAge + 10 * SCALE_AGE) < (5 * SCALE_AGE);
 
-         if (shouldIgnite && !level.isRainingAt(targetPos)) {
-            // User's change: new fires start at age 0
+         if (actuallyIgnites && !level.isRainingAt(targetPos)) {
+            // Fuel ignites and is replaced by a new fire block (age 0)
             level.setBlock(targetPos, this.getStateWithAge(level, targetPos, 0), Block.UPDATE_ALL);
          } else {
-            // User's change: Block is NOT removed if ignition fails.
-            // Original vanilla code would have level.removeBlock(targetPos, false) here.
-            // This makes fuel persist unless it actually catches fire.
+            // Fuel was affected but didn't sustain ignition (e.g., too "young" a source fire, or raining).
+            // It gets consumed/removed to represent burnt fuel, allowing fire front to pass.
+            // This is crucial for realistic isochrone development.
+            level.removeBlock(targetPos, false);
          }
 
-         if (targetBlockState.getBlock() instanceof TntBlock) {
+         if (targetBlockState.getBlock() instanceof TntBlock) { // TNT has special behavior
             TntBlock.explode(level, targetPos);
          }
       }
    }
 
    private BlockState getStateWithAge(LevelAccessor levelAccessor, BlockPos blockPos, int fireAge) {
-      BlockState blockState = levelAccessor.getBlockState(blockPos);
-      // Ensure it's setting age on a fire block, or returning the default fire state if replacing another block
-      if (blockState.is(this)) { // `this` refers to the FireBlock instance
-         return blockState.setValue(AGE, Math.min(MAX_AGE, Math.max(0, fireAge)));
-      }
-      // If for some reason we are trying to set age on a non-fire block (e.g. newly placed fire), return default fire state with age.
-      return this.defaultBlockState().setValue(AGE, Math.min(MAX_AGE, Math.max(0, fireAge)));
+      BlockState existingState = levelAccessor.getBlockState(blockPos);
+      int newAge = Math.min(MAX_AGE, Math.max(0, fireAge));
+      // If we're placing fire on a new spot (likely air or consumed block), or updating existing fire
+      return this.defaultBlockState().setValue(AGE, newAge);
    }
-
 
    private boolean isValidFireLocation(BlockGetter blockGetter, BlockPos blockPos) {
       for (Direction direction : Direction.values()) {
-         if (this.canBurn(blockGetter.getBlockState(blockPos.relative(direction)))) {
-            return true;
-         }
+         if (this.canBurn(blockGetter.getBlockState(blockPos.relative(direction)))) return true;
       }
       return false;
    }
 
-   // Renamed from getIgniteOdds_Adjacent
-   private int getIgniteOddsFromNeighbors(LevelReader levelReader, BlockPos airBlockPos) {
-      // This method is called for an airBlockPos to see if its neighbors can ignite it.
-      if (!levelReader.isEmptyBlock(airBlockPos)) { // Should already be an air block based on call site
-         return 0;
-      }
-      int highestNeighborIgniteOdds = 0;
+   /**
+    * Gets the highest "encouragement" value from neighbors of a potential air block fire.
+    * Used by Mechanism 2 (3D Air Spread).
+    */
+   private int getEncouragementFromNeighbors(LevelReader levelReader, BlockPos airBlockPos) {
+      if (!levelReader.isEmptyBlock(airBlockPos)) return 0; // Should be an air block
+
+      int highestEncouragement = 0;
       for (Direction direction : Direction.values()) {
          BlockState neighborState = levelReader.getBlockState(airBlockPos.relative(direction));
-         highestNeighborIgniteOdds = Math.max(highestNeighborIgniteOdds, this.getBlockIgniteChance(neighborState));
+         highestEncouragement = Math.max(highestEncouragement, this.getNeighborEncouragement(neighborState));
       }
-      return highestNeighborIgniteOdds;
+      return highestEncouragement;
    }
 
    @Override
    protected boolean canBurn(BlockState potentialFuelState) {
-      // A block can burn if it has a non-zero chance to ignite an adjacent air block (igniteOdds)
-      // or a non-zero chance to be consumed/replaced by fire (burnOdds).
-      // Vanilla uses getIgniteOdds1 (this.igniteOdds.getInt) > 0.
-      // Using igniteOdds is consistent with vanilla logic for what can sustain fire.
-      return this.getBlockIgniteChance(potentialFuelState) > 0;
+      // A block is considered capable of burning (supporting fire / being a valid location)
+      // if it has >0 "igniteOdds" (meaning it can encourage spread to air).
+      // This is consistent with vanilla.
+      return this.getNeighborEncouragement(potentialFuelState) > 0;
    }
 
    private static int getFireTickDelay(RandomSource randomSource) {
-      // User's change: fixed delay
-      return 20; // 1 second (vanilla: 30-39 ticks, 1.5-1.95s)
+      return 20; // 1 second fixed delay
    }
 
    @Override
@@ -375,193 +322,62 @@ public class FireBlock extends BaseFireBlock {
       builder.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
    }
 
-   /************************************************************************************
-    * Part 5. Bootstrapping & Flammability Settings
-    ************************************************************************************/
    private void setFlammable(Block block, int igniteOdds, int burnOdds) {
-      // igniteOdds: How easily this block can cause an adjacent air block to catch fire (used in 3D spread for neighbors of air)
-      // burnOdds: How easily this block burns up and is replaced by fire (used in direct adjacent spread)
-      this.igniteOdds.put(block, igniteOdds);
-      this.burnOdds.put(block, burnOdds);
+      this.igniteOdds.put(block, igniteOdds); // How well it encourages fire spread to adjacent AIR
+      this.burnOdds.put(block, burnOdds);   // How readily IT BURNS and propagates fire to adjacent FUEL
    }
 
    public static void bootStrap() {
-      FireBlock fireBlockInstance = (FireBlock) Blocks.FIRE;
-      // --- PASTE YOUR FULL LIST OF setFlammable calls here ---
-      fireBlockInstance.setFlammable(Blocks.OAK_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_PLANKS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_MOSAIC, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_MOSAIC_SLAB, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_FENCE_GATE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_FENCE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_MOSAIC_STAIRS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO_BLOCK, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_OAK_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_SPRUCE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_BIRCH_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_JUNGLE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_ACACIA_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_CHERRY_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_DARK_OAK_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_MANGROVE_LOG, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_BAMBOO_BLOCK, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_OAK_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_SPRUCE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_BIRCH_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_JUNGLE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_ACACIA_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_CHERRY_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_DARK_OAK_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.STRIPPED_MANGROVE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.OAK_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_WOOD, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_ROOTS, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.OAK_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.SPRUCE_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BIRCH_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.JUNGLE_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.ACACIA_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.CHERRY_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.DARK_OAK_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.MANGROVE_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BOOKSHELF, 30, 20);
-      fireBlockInstance.setFlammable(Blocks.TNT, 15, 100);
-      fireBlockInstance.setFlammable(Blocks.GRASS, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.FERN, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.DEAD_BUSH, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.SUNFLOWER, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.LILAC, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.ROSE_BUSH, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.PEONY, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.TALL_GRASS, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.LARGE_FERN, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.DANDELION, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.POPPY, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.BLUE_ORCHID, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.ALLIUM, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.AZURE_BLUET, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.RED_TULIP, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.ORANGE_TULIP, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.WHITE_TULIP, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.PINK_TULIP, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.OXEYE_DAISY, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.CORNFLOWER, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.LILY_OF_THE_VALLEY, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.TORCHFLOWER, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.PITCHER_PLANT, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.WITHER_ROSE, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.PINK_PETALS, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.WHITE_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.ORANGE_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.MAGENTA_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.YELLOW_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.LIME_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.PINK_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.GRAY_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.LIGHT_GRAY_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.CYAN_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.PURPLE_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BLUE_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BROWN_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.GREEN_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.RED_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BLACK_WOOL, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.VINE, 15, 100);
-      fireBlockInstance.setFlammable(Blocks.COAL_BLOCK, 5, 5);
-      fireBlockInstance.setFlammable(Blocks.HAY_BLOCK, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.TARGET, 15, 20);
-      fireBlockInstance.setFlammable(Blocks.WHITE_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.ORANGE_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.MAGENTA_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.LIGHT_BLUE_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.YELLOW_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.LIME_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.PINK_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.GRAY_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.LIGHT_GRAY_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.CYAN_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.PURPLE_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.BLUE_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.BROWN_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.GREEN_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.RED_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.BLACK_CARPET, 60, 20);
-      fireBlockInstance.setFlammable(Blocks.DRIED_KELP_BLOCK, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BAMBOO, 60, 60);
-      fireBlockInstance.setFlammable(Blocks.SCAFFOLDING, 60, 60);
-      fireBlockInstance.setFlammable(Blocks.LECTERN, 30, 20);
-      fireBlockInstance.setFlammable(Blocks.COMPOSTER, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.SWEET_BERRY_BUSH, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.BEEHIVE, 5, 20);
-      fireBlockInstance.setFlammable(Blocks.BEE_NEST, 30, 20);
-      fireBlockInstance.setFlammable(Blocks.AZALEA_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.FLOWERING_AZALEA_LEAVES, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.CAVE_VINES, 15, 60);
-      fireBlockInstance.setFlammable(Blocks.CAVE_VINES_PLANT, 15, 60);
-      fireBlockInstance.setFlammable(Blocks.SPORE_BLOSSOM, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.AZALEA, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.FLOWERING_AZALEA, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.BIG_DRIPLEAF, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.BIG_DRIPLEAF_STEM, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.SMALL_DRIPLEAF, 60, 100);
-      fireBlockInstance.setFlammable(Blocks.HANGING_ROOTS, 30, 60);
-      fireBlockInstance.setFlammable(Blocks.GLOW_LICHEN, 15, 100);
+      FireBlock fireInstance = (FireBlock) Blocks.FIRE;
 
+      // --- DEFINE FUEL PROPERTIES FOR QUADRANTS HERE ---
+      // Higher burnOdds = faster spread on that fuel type.
+      // spreadResistanceParam for horizontal spread is ~300 (less in wet biomes).
+      // P(affect) approx. = burnOdds / 300.
+      // E.g., burnOdds=30 -> ~10% chance per tick per neighbor.
+      // E.g., burnOdds=150 -> ~50% chance per tick per neighbor.
+
+      // Example for your 2D quadrant setup (adjust names and values as needed):
+      // Quadrant 1: Fast Fuel (e.g., Dry Grass - use appropriate block type)
+      // To make a block act like "FUEL_TYPE_FAST", assign these properties to it.
+      fireInstance.setFlammable(Blocks.GRASS_BLOCK, 60, 150); // High burnOdds for fast spread
+      fireInstance.setFlammable(Blocks.TALL_GRASS, 60, 180);  // Even faster
+      fireInstance.setFlammable(Blocks.OAK_LEAVES, 30, 90);   // Leaves are also quite flammable
+
+
+      fireInstance.setFlammable(Blocks.PURPLE_WOOL, 60, 180);   // Leaves are also quite flammable
+
+
+      // Quadrant 2: Medium Fuel (e.g., Wooden Planks, Shrubbery)
+      fireInstance.setFlammable(Blocks.OAK_PLANKS, 5, 30);   // Moderate burnOdds
+      fireInstance.setFlammable(Blocks.OAK_LOG, 5, 25);      // Logs slightly slower than planks
+
+
+      fireInstance.setFlammable(Blocks.GREEN_WOOL, 5, 30);      // Logs slightly slower than planks
+
+
+      // Quadrant 3: Slow Fuel (e.g., Dense Wood, Compacted Material)
+      // For a custom "Dense Fuel Block", you'd need to create that block first.
+      // Using Wool as a proxy for something slower than planks but still flammable.
+      fireInstance.setFlammable(Blocks.WHITE_WOOL, 5, 15);    // Slower burnOdds
+      fireInstance.setFlammable(Blocks.BOOKSHELF, 30, 20);
+
+
+      fireInstance.setFlammable(Blocks.PINK_WOOL, 5, 15);
+
+
+      // Quadrant 4: Very Slow/Resistant Fuel (e.g., Damp Wood, Less Flammable Material)
+      // Use a block that is barely flammable.
+      // Example: Coal Block is very hard to burn in vanilla, used here as very slow.
+      fireInstance.setFlammable(Blocks.COAL_BLOCK, 1, 5);   // Very low burnOdds
+
+
+      fireInstance.setFlammable(Blocks.LIGHT_BLUE_WOOL, 1, 5);
+
+
+      // --- Standard Flammability Settings (add more as needed) ---
+      fireInstance.setFlammable(Blocks.SPRUCE_PLANKS, 5, 30);
+      // ... (Paste your full list of other flammable blocks here) ...
+      fireInstance.setFlammable(Blocks.TNT, 15, 100); // TNT is special, high burn to ensure it's affected
    }
 }
