@@ -582,16 +582,16 @@ public class FireBlock extends BaseFireBlock {
 
 
       ///1st Quadrant
-      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log
+      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log = 9
 
       /// 2nd Quadrant
-      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Dead Bush
+      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Dead Bush = 1
 
       /// 3rd Quadrant
-      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block
+      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block = 3
 
       /// 4th Quadrant
-      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves
+      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves = 6
 
    }
 }
