@@ -581,17 +581,37 @@ public class FireBlock extends BaseFireBlock {
       ///  EDIT: Adjust these 4 Wools to simulate the relevant blocks above for better visualisation
 
 
+//      ///1st Quadrant
+//      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log = 9
+//
+//      /// 2nd Quadrant
+//      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Grass or Dead Bush = 1
+//
+//      /// 3rd Quadrant
+//      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block = 3
+//
+//      /// 4th Quadrant
+//      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves = 6
+
+
       ///1st Quadrant
-      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log = 9
+      fireblock.setFlammable(Blocks.PURPLE_WOOL, 95, 5);      /// Low Activation Energy, Long Burn Time
 
       /// 2nd Quadrant
-      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Dead Bush = 1
+      fireblock.setFlammable(Blocks.GREEN_WOOL, 5, 5);         /// High Activation Energy, Long Burn Time
 
       /// 3rd Quadrant
-      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block = 3
+      fireblock.setFlammable(Blocks.PINK_WOOL, 95, 95);      /// Low Activation Energy, Short Burn Time
 
       /// 4th Quadrant
-      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves = 6
+      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 5, 95);  /// High Activation Energy, Short Burn Time
+
+
+//      ///Left Half
+//      fireblock.setFlammable(Blocks.PURPLE_WOOL, 50, 95);       /// Low Activation Energy, Long Burn Time
+//
+//      ///Right Half
+//      fireblock.setFlammable(Blocks.GREEN_WOOL, 50, 5);        /// High Activation Energy, Long Burn Time
 
    }
 }
