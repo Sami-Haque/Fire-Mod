@@ -13,8 +13,10 @@ gradle-app.setting
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
 
-!Fire-Mod/build/libs/
-!Fire-Mod/build/libs/**
+# build/
+!build/libs/
+!build/libs/**
+
 
 
 #IDE files
