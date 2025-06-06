@@ -54,7 +54,7 @@ public class FireBlock extends BaseFireBlock {
       return p_53467_.getKey() != Direction.DOWN;
    }).collect(Util.toMap());
 
-// EDITS TO CODE I MAKE
+   // EDITS TO CODE I MAKE
    private static int fireTickCounter = 0; // for the HUD
    private static final boolean ENABLE_VERTICAL_FIRE_SPREAD = true; // false = 2D spread only, true = full 3D spread
 
@@ -217,7 +217,7 @@ public class FireBlock extends BaseFireBlock {
 
                   return;
                }
-                              /// EDIT
+               /// EDIT
                if (FIREAGE == MAX_AGE                                                        /// If the fire age is at max age
 //                       && RANDOMSOURCE.nextInt(4) == 0                                       /// nextInt(4): 1 in 4 chance for it to remove the fire block --> EDIT: nextInt(1) = 100% CHANCE
                        && !this.canBurn(SERVERLEVEL.getBlockState(BLOCKPOSITION.below()))) { /// If the block below does not have ignite odds (non flammable block below)
@@ -581,30 +581,30 @@ public class FireBlock extends BaseFireBlock {
       ///  EDIT: Adjust these 4 Wools to simulate the relevant blocks above for better visualisation
 
 
+      ///1st Quadrant (NW)
+      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log = 9
+
+      /// 2nd Quadrant (NE)
+      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Grass = 1
+
+      /// 3rd Quadrant (SW)
+      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block = 3
+
+      /// 4th Quadrant (SE)
+      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves = 6
+
+
 //      ///1st Quadrant
-//      fireblock.setFlammable(Blocks.PURPLE_WOOL, 5, 5);        /// Oak Log = 9
+//      fireblock.setFlammable(Blocks.PURPLE_WOOL, 95, 5);      /// Low Activation Energy, Long Burn Time
 //
 //      /// 2nd Quadrant
-//      fireblock.setFlammable(Blocks.GREEN_WOOL, 60, 100);      /// Grass or Dead Bush = 1
+//      fireblock.setFlammable(Blocks.GREEN_WOOL, 5, 5);         /// High Activation Energy, Long Burn Time
 //
 //      /// 3rd Quadrant
-//      fireblock.setFlammable(Blocks.PINK_WOOL, 60, 20);        /// Hay Block = 3
+//      fireblock.setFlammable(Blocks.PINK_WOOL, 95, 95);      /// Low Activation Energy, Short Burn Time
 //
 //      /// 4th Quadrant
-//      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 30, 60);  /// Oak Leaves = 6
-
-
-      ///1st Quadrant
-      fireblock.setFlammable(Blocks.PURPLE_WOOL, 95, 5);      /// Low Activation Energy, Long Burn Time
-
-      /// 2nd Quadrant
-      fireblock.setFlammable(Blocks.GREEN_WOOL, 5, 5);         /// High Activation Energy, Long Burn Time
-
-      /// 3rd Quadrant
-      fireblock.setFlammable(Blocks.PINK_WOOL, 95, 95);      /// Low Activation Energy, Short Burn Time
-
-      /// 4th Quadrant
-      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 5, 95);  /// High Activation Energy, Short Burn Time
+//      fireblock.setFlammable(Blocks.LIGHT_BLUE_WOOL, 5, 95);  /// High Activation Energy, Short Burn Time
 
 
 //      ///Left Half
